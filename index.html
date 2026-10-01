@@ -1862,13 +1862,30 @@ function renderBlock(b){
 
 /* ===== ボード更新 ===== */
 function updateBoard(){
-  const board=document.getElementById("board");
-  const up={noLeft:"2",noRight:"1",title:"上り　戸頭・取手方面",trains:getNextTrains(trainsUp)};
-  const down={noLeft:"4",noRight:"3",title:"下り　水海道・下館方面",trains:getNextTrains(trainsDown)};
-  board.innerHTML = window.innerWidth>=1250
+  const board = document.getElementById("board");
+
+  const up = {
+    noLeft: "2",
+    noRight: "1",
+    title: "上り　戸頭・取手方面",
+    trains: getNextTrains(trainsUp)
+  };
+
+  const down = {
+    noLeft: "4",
+    noRight: "3",
+    title: "下り　水海道・下館方面",
+    trains: getNextTrains(trainsDown)
+  };
+
+  board.innerHTML = window.innerWidth >= 1250
     ? `<div>${renderBlock(down)}</div><div>${renderBlock(up)}</div>`
     : `<div>${renderBlock(up)}</div><div>${renderBlock(down)}</div>`;
+
+  // 「列車がまいります」の表示状態に合わせてapp.mp3を制御
+  updateApproachSound();
 }
+
 
 /* ===== 現在時刻 & 次列車更新 ===== */
 function updateTime(){
@@ -2017,6 +2034,31 @@ window.addEventListener('resize',updateBoard);
 </script>
 
 <script>
+
+const app = new Audio("app.mp3");
+app.preload = "auto";
+app.loop = true;
+
+function updateApproachSound() {
+    const isApproaching =
+        document.querySelector(".row.arrival.blink") !== null;
+
+    if (isApproaching) {
+        if (app.paused) {
+            app.currentTime = 0;
+
+            app.play().catch(error => {
+                console.error("app.mp3再生エラー:", error);
+            });
+        }
+    } else {
+        if (!app.paused) {
+            app.pause();
+            app.currentTime = 0;
+        }
+    }
+}
+
 /* ========================================
    スイッチ操作
 ======================================== */
