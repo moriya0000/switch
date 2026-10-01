@@ -183,7 +183,7 @@ body {
 }
 
 .station-sign {
-  width: 500px;
+  width: 400px;
   height: 120px;
   background: #fff;
   border: 4px solid #000;
@@ -1090,49 +1090,109 @@ button {
         touch-action: manipulation;
     }
 }
+.control-area {
+    width: min(1200px, calc(100vw - 32px));
+    margin: 0 auto 15px;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-wrap: wrap;
+
+    gap: 8px;
+}
+
+.control-row label {
+    white-space: nowrap;
+}
+
+.control-row input {
+    width: 80px;
+}
+
+#delayMinutes {
+    width: 60px;
+}
+
+#timetableStatus {
+    margin-left: 10px;
+}
+
+
+/* iPad縦 */
+@media screen and
+(min-width: 768px) and
+(max-width: 1366px) and
+(orientation: portrait) {
+
+    .control-area {
+        width: calc(100vw - 32px);
+    }
+
+}
+
+
+/* スマホ */
+@media screen and (max-width: 600px) {
+
+    .control-area {
+        width: calc(100vw - 20px);
+    }
+
+    .control-row {
+        justify-content: center;
+    }
+
+    .control-row label {
+        font-size: 14px;
+    }
+
+}
 
 </style>
 </head>
 
 <body>
 
-<div class="top">
-  <div class="label">現在時刻</div>
-  <div class="time" id="now">00:00</div>
-    <div class="service-info">
-  <div class="station-sign">
-    <div class="sign-main" id="todayDate">0000年00月00日</div>
-    <div class="sign-sub" id="dayType">---</div>
+
+<div class="control-area">
+
+  <div class="control-row">
+    <label>
+      列車番号：
+      <input type="text" id="delayTrainNo">
+    </label>
+
+    <label>
+      遅延時間(分)：
+      <input type="number" id="delayMinutes">
+    </label>
+
+    <button id="addDelay">追加</button>
+
+    <button onclick="window.open('https://kantetsu-moba.jp/', '_blank')">
+      モバスクリーン
+    </button>
   </div>
-</div>
 
-</div>
-<div class="label" style="margin-top:-100px; display:flex; gap:8px; align-items:center;">
-<div>
-    <div>　</div>
-    <div>　</div>
+  <div class="control-row">
+    <span>ダイヤ切替：</span>
+
+    <button id="btnAuto">自動</button>
+    <button id="btnWeekday">平日</button>
+    <button id="btnHoliday">休日</button>
+
+    <span id="timetableStatus"></span>
   </div>
 
-</div>
-
-</div>
-
-<div class="top" style="margin-top:-20px; display:flex; gap:8px; align-items:center;">
-  <label>列車番号: <input type="text" id="delayTrainNo" style="width:80px;"></label>
-  <label>遅延時間(分): <input type="number" id="delayMinutes" style="width:60px;"></label>
-  <button id="addDelay">追加</button>
-<button onclick="window.open('https://kantetsu-moba.jp/', '_blank')">
-  モバスクリーン
-</button>
-
-</div>
-
-<div class="top" style="margin-top:-10px; display:flex; gap:8px; align-items:center;">
-  <span>ダイヤ切替：</span>
-  <button id="btnAuto">自動</button>
-  <button id="btnWeekday">平日</button>
-  <button id="btnHoliday">休日</button>
-  <span id="timetableStatus" style="margin-left:18px;"></span>
 </div>
 <div class="board" id="board"></div>
 <!-- ================================
@@ -1577,6 +1637,9 @@ function loadTimetableByDayType(){
   updateBoard();
   updateNextTrains();
 }
+function updateNextTrains(){
+    updateBoard();
+}
 
 
 function parseCsv(csv){
@@ -1755,10 +1818,6 @@ function renderRow(train){
       </div>
       <div class="dest">${lang==='ja'?train.dest:destMap[train.dest]}</div>
       <div class="time2">${displayTimeHtml}</div>
-      <div class="cars">
-        ${train.cars}<span class="suffix">${lang==='ja'?'両':(train.cars==='1'?'Car':'Cars')}</span>
-      </div>
-      <div class="track">${train.trackno}</div>
     </div>
   `;
 }
@@ -1776,7 +1835,7 @@ function renderBlock(b){
       <div class="no">${b.noRight}</div>
     </div>
     <div class="header">
-      <div>種別</div><div>行先</div><div>発車時刻</div><div>両</div><div>番線</div>
+      <div>種別</div><div>行先</div><div>発車時刻</div>
     </div>
     <div class="table">`;
 
