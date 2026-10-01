@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<title>関鉄発車標</title>
+<link rel="shortcut icon" href="https://www.kantetsu.co.jp/cms/wp-content/themes/kr/img/favicon/favicon.ico">
+<style>
+body {
+  margin: 0;
+  background: #fff;
+  font-family: "JFドットjiskan24h", "MS ゴシック", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* 現在時刻 */
+.top {
+  width: 1200px;
+  display: grid;
+  grid-template-columns: 80px 580px 1fr 200px;
+  align-items: start;
+  padding: 18px 0 5px;
+  font-family: "MS ゴシック";
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+.top .label { font-size:16px; font-weight:bold; }
+.top .time  { font-size:48px; font-weight:bold; text-align:left;}
+
+/* 発車標 */
+.board {
+  display: grid;
+  grid-template-columns: 625px;
+  justify-content: center;
+}
+.board > div {
+  width: 625px;
+  background: #777;
+  margin: 8px 0;
+}
+@media screen and (min-width: 1250px) {
+  .board { grid-template-columns: 625px 625px; }
+}
+
+/* ブロック */
+.block {
+  background: #666;
+  margin: 0;
+  padding: 6px;
+}
+
+/* タイトル */
+.block-title {
+  display: grid;
+  grid-template-columns: 70px 1fr 40px;
+  align-items: center;
+  color: #fff;
+  font-size: 26px;
+  font-family: "国鉄っぽいフォント（正体）";
+  margin-bottom: 4px;
+}
+
+.block-title .no {
+  border:3px solid #fff;
+  width:35px;
+  text-align:center;
+}
+
+/* 見出し */
+.header {
+  display: grid;
+  grid-template-columns: 130px 240px 120px 70px 60px;
+  font-size: 18px;
+  font-family: "MS ゴシック";
+  color: #fff;
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+/* 表 */
+.table {
+  background: #3a3a3a;
+  padding: 4px 0;
+}
+.row {
+  display: grid;
+  grid-template-columns: 130px 240px 118px 72px 60px;
+  align-items: center;
+  margin-bottom: 2px;
+  height: 50px;
+  }
+
+/* 文字 */
+.type  { color: #33cc33; font-size:46px; text-align:center; }
+.dest  { color: #ffcc00; font-size:46px; text-align:center; }
+.time2 { color: #33cc33; font-size:46px; text-align:right; position: relative;}
+.cars  { color: #ffcc00; font-size:46px; text-align:center; }
+.track { color: #33cc33; font-size:46px; text-align:center; }
+
+.cars .suffix {
+  font-size: 24px;
+  position: relative;
+  top: -2px;
+  margin-left: 2px;
+}
+
+/* ===== 案内表示 ===== */
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes scrollText {
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(-100%); }
+}
+
+
+/* 案内行（row互換） */
+.row.arrival {
+  grid-template-columns: 1fr;
+  height: 50px;
+}
+
+.service-info iframe {
+  width: 650px;
+  height: 170px;
+}
+.row.arrival > div {
+  grid-column: 1 / -1;
+  width: 100%;
+  font-size: 48px;
+  text-align: center;
+  color: #ff3333; /* 赤 */
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+
+.row.arrival.scroll span {
+  display: inline-block;
+  min-width: 100%;
+  padding-left: 100%;
+  animation: scrollText 12s linear;
+}
+
+/* 点滅 */
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.row.arrival.blink > div {
+  animation: blink 1s steps(1) infinite;
+}
+
+.type.rapid {
+  color: #ff3333; /* 赤 */
+}
+
+
+.next-trains {
+  font-size: 24px;
+  color: #333;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.time2 .delay {
+  position: absolute;
+  bottom: -20px;       /* 時刻の真ん中下寄り */
+  left: 50%;
+  transform: translateX(-50%);
+  color: red;
+  font-size: 23px;   /* 元の半分 */
+ white-space: nowrap;
+}
+
+.station-sign {
+  width: 500px;
+  height: 120px;
+  background: #fff;
+  border: 4px solid #000;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-family: "国鉄っぽいフォント（正体）", "MS ゴシック", monospace;
+}
+
+.sign-main {
+  font-size: 50px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.sign-sub {
+  font-size: 42px;
+  padding: 2px 24px;
+  border-top: 2px solid #000;
+}
+.next-trains{
+  font-size: 38px;
+  margin-bottom: 6px;
+  font-family: "国鉄っぽいフォント（正体）", "MS ゴシック", monospace;
+
+}
+/* ========================================
+   音声スイッチ
+======================================== */
+
+/* ========================================
+   スイッチ操作
+======================================== */
+
+.switch-page {
+    width: 100%;
+    padding: 50px 20px 80px;
+
+    text-align: center;
+
+    font-family:
+        "Noto Sans JP",
+        "Yu Gothic",
+        "Hiragino Kaku Gothic ProN",
+        sans-serif;
+
+    color: #333;
+}
+
+.switch-title {
+    margin-bottom: 45px;
+
+    font-size: 26px;
+    font-weight: 600;
+
+    letter-spacing: 0.12em;
+}
+
+.switch-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+
+    gap: 55px;
+
+    flex-wrap: wrap;
+}
+.switch {
+    position: relative;
+
+    width: 365px;
+    height: 544px;
+
+    transform: none;
+    transition: none;
+}
+
+.switch:hover {
+    transform: none;
+}
+
+.switch-image {
+    display: block;
+
+    width: 365px;
+    height: 544px;
+
+    user-select: none;
+    -webkit-user-drag: none;
+
+    pointer-events: none;
+}
+
+/* ========================================
+   ONボタン
+======================================== */
+
+.on-button {
+    position: absolute;
+
+    left: 150px;
+    top: 225px;
+
+    width: 71px;
+    height: 71px;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    background: #050505;
+    color: #eeeeee;
+
+    font-family: Arial, sans-serif;
+    font-size: 33px;
+    font-weight: 300;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    transform: translateY(0);
+
+    box-shadow:
+        inset 0 1px 2px rgba(255,255,255,0.15),
+        inset 0 -3px 4px rgba(0,0,0,0.8),
+        0 1px 2px rgba(0,0,0,0.8);
+
+    transition:
+        transform 0.08s ease,
+        box-shadow 0.08s ease;
+
+    user-select: none;
+}
+
+
+/*
+ * ON中は押し込まれた状態を維持
+ */
+
+.on-button.pressed {
+    transform:
+        translateY(2px)
+        scale(0.96);
+
+    box-shadow:
+        inset 0 4px 6px rgba(0,0,0,0.9),
+        inset 0 -1px 2px rgba(255,255,255,0.08),
+        0 0 1px rgba(0,0,0,0.8);
+}
+
+
+/* ========================================
+   OFFボタン
+======================================== */
+
+.off-button {
+    position: absolute;
+
+    left: 150px;
+    top: 323px;
+
+    width: 71px;
+    height: 71px;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    background: #d40000;
+    color: white;
+
+    font-family: Arial, sans-serif;
+    font-size: 31px;
+    font-weight: 300;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    box-shadow:
+        inset 0 1px 2px rgba(255,255,255,0.15),
+        inset 0 -3px 4px rgba(100,0,0,0.8),
+        0 1px 2px rgba(0,0,0,0.8);
+
+    transition:
+        transform 0.08s ease,
+        box-shadow 0.08s ease;
+
+    user-select: none;
+}
+
+
+/*
+ * OFFは押した瞬間だけ沈む
+ */
+
+.off-button:active {
+    transform:
+        translateY(-2px)
+        scale(0.96);
+
+    box-shadow:
+        inset 0 4px 6px rgba(80,0,0,0.9),
+        inset 0 -1px 2px rgba(255,255,255,0.08);
+}
+
+
+/* ========================================
+   状態表示
+======================================== */
+
+.status {
+    position: absolute;
+
+    bottom: -42px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    min-width: 90px;
+
+    padding: 6px 16px;
+
+    text-align: center;
+
+    border-radius: 15px;
+
+    background: #eeeeee;
+
+    color: #777;
+
+    font-size: 13px;
+
+    letter-spacing: 0.08em;
+
+    border: 1px solid #dddddd;
+}
+
+.switch.is-on .status {
+    color: #267a35;
+    background: #eef8ef;
+    border-color: #c8e5cc;
+}
+
+
+/* ========================================
+   スマホ対応
+======================================== */
+
+@media (max-width: 1000px) {
+
+    .switch-container {
+        gap: 70px;
+    }
+
+}
+
+@media (max-width: 520px) {
+
+    .switch-page {
+        padding: 30px 10px;
+    }
+
+    .switch-title {
+        font-size: 22px;
+        margin-bottom: 35px;
+    }
+
+    .switch {
+        transform: scale(0.78);
+        transform-origin: center top;
+
+        margin-bottom: -130px;
+    }
+
+    .switch:hover {
+        transform: scale(0.78);
+    }
+
+}
+
+button {
+    -webkit-tap-highlight-color: transparent;
+}
+/* ========================================
+   iPad / タブレット対応
+======================================== */
+
+/* 横スクロールを防止 */
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* iPadでのタップ操作を安定させる */
+button,
+input {
+    touch-action: manipulation;
+}
+
+/* 入力欄をiPadで操作しやすくする */
+input[type="text"],
+input[type="number"] {
+    min-height: 38px;
+    box-sizing: border-box;
+    padding: 4px 8px;
+    font-size: 18px;
+}
+
+/* ボタンをタッチしやすく */
+button {
+    min-height: 40px;
+    padding: 6px 14px;
+    font-size: 17px;
+    cursor: pointer;
+}
+
+/* ========================================
+   iPad 縦向き
+======================================== */
+
+@media screen and (max-width: 1249px) {
+
+    .top {
+        width: min(96vw, 1000px);
+        max-width: 100%;
+    }
+
+    /* 発車標を画面幅に合わせる */
+    .board {
+        width: 100%;
+        max-width: 100%;
+        grid-template-columns: minmax(0, 625px);
+    }
+
+    .board > div {
+        width: 100%;
+        max-width: 625px;
+        box-sizing: border-box;
+    }
+
+    .block {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+}
+
+
+/* ========================================
+   iPad 横向き
+======================================== */
+
+@media screen and (min-width: 768px) and (max-width: 1366px) {
+
+    .top {
+        width: 96vw;
+    }
+
+    .board {
+        width: 100%;
+        padding: 0 10px;
+        box-sizing: border-box;
+
+        grid-template-columns:
+            minmax(0, 625px)
+            minmax(0, 625px);
+
+        gap: 10px;
+    }
+
+    .board > div {
+        width: 100%;
+        max-width: none;
+        margin: 8px 0;
+    }
+
+}
+
+
+/* ========================================
+   iPad 縦向き：発車標を縮小
+======================================== */
+
+@media screen and (min-width: 600px) and (max-width: 767px) {
+
+    .top {
+        width: 96vw;
+    }
+
+    .board {
+        width: 96vw;
+        grid-template-columns: 1fr;
+    }
+
+    .board > div {
+        width: 100%;
+    }
+
+}
+
+
+/* ========================================
+   iPad / タブレット用スイッチ
+======================================== */
+
+@media screen and (max-width: 1100px) {
+
+    .switch-page {
+        width: 100%;
+        box-sizing: border-box;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .switch-container {
+        gap: 30px;
+    }
+
+    .switch {
+        transform: scale(0.85);
+        transform-origin: center top;
+
+        margin-bottom: -80px;
+    }
+
+    .switch:hover {
+        transform: scale(0.85);
+    }
+
+}
+
+
+/* ========================================
+   iPad 縦向き
+======================================== */
+
+@media screen and (max-width: 767px) {
+
+    .switch-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .switch {
+        transform: scale(0.82);
+        transform-origin: center top;
+        margin-bottom: -80px;
+    }
+
+    .switch:hover {
+        transform: scale(0.82);
+    }
+
+}
+
+
+/* ========================================
+   小型画面
+======================================== */
+
+@media screen and (max-width: 520px) {
+
+    .switch {
+        transform: scale(0.68);
+        transform-origin: center top;
+        margin-bottom: -160px;
+    }
+
+    .switch:hover {
+        transform: scale(0.68);
+    }
+
+}
+
+
+/* ========================================
+   タッチ端末用
+======================================== */
+
+@media (hover: none) and (pointer: coarse) {
+
+    button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .on-button,
+    .off-button {
+        /* 元の位置・サイズを維持 */
+        touch-action: manipulation;
+    }
+
+    .on-button:active,
+    .off-button:active {
+        opacity: 0.85;
+    }
+
+}
+
+
+/* ========================================
+   iPad Safe Area
+======================================== */
+
+@supports (padding: env(safe-area-inset-top)) {
+
+    body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        padding-bottom: env(safe-area-inset-bottom);
+        box-sizing: border-box;
+    }
+
+}
+
+
+/* ========================================
+   iPadで文字選択を防止
+======================================== */
+
+.switch,
+.on-button,
+.off-button,
+.block-title,
+.header,
+.row {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+
+/* ========================================
+   ダブルタップによる拡大を抑制
+======================================== */
+
+button {
+    touch-action: manipulation;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="top">
+  <div class="label">現在時刻</div>
+  <div class="time" id="now">00:00</div>
+    <div class="service-info">
+  <div class="station-sign">
+    <div class="sign-main" id="todayDate">0000年00月00日</div>
+    <div class="sign-sub" id="dayType">---</div>
+  </div>
+</div>
+
+</div>
+<div class="label" style="margin-top:-100px; display:flex; gap:8px; align-items:center;">
+<div>
+    <div>　</div>
+    <div>　</div>
+  </div>
+
+</div>
+
+</div>
+
+<div class="top" style="margin-top:-20px; display:flex; gap:8px; align-items:center;">
+  <label>列車番号: <input type="text" id="delayTrainNo" style="width:80px;"></label>
+  <label>遅延時間(分): <input type="number" id="delayMinutes" style="width:60px;"></label>
+  <button id="addDelay">追加</button>
+<button onclick="window.open('https://kantetsu-moba.jp/', '_blank')">
+  モバスクリーン
+</button>
+
+</div>
+
+<div class="top" style="margin-top:-10px; display:flex; gap:8px; align-items:center;">
+  <span>ダイヤ切替：</span>
+  <button id="btnAuto">自動</button>
+  <button id="btnWeekday">平日</button>
+  <button id="btnHoliday">休日</button>
+  <span id="timetableStatus" style="margin-left:18px;"></span>
+</div>
+<div class="board" id="board"></div>
+<!-- ================================
+     スイッチ操作
+================================ -->
+
+<div class="switch-page">
+
+    
+    <div class="switch-container">
+
+        <!-- 上り -->
+        <div class="switch" id="nobori">
+
+            <img
+                class="switch-image"
+                src="上り.png"
+                alt="上りスイッチ"
+            >
+
+            <button
+                class="on-button"
+                aria-label="上り ON"
+            >
+                ON
+            </button>
+
+            <button
+                class="off-button"
+                aria-label="上り OFF"
+            >
+                OFF
+            </button>
+
+            <div class="status">
+                OFF
+            </div>
+
+        </div>
+
+
+        <!-- 下り -->
+        <div class="switch" id="kudari">
+
+            <img
+                class="switch-image"
+                src="下り.png"
+                alt="下りスイッチ"
+            >
+
+            <button
+                class="on-button"
+                aria-label="下り ON"
+            >
+                ON
+            </button>
+
+            <button
+                class="off-button"
+                aria-label="下り OFF"
+            >
+                OFF
+            </button>
+
+            <div class="status">
+                OFF
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+/* ===== CSV・マッピング（元のまま） ===== */
+const destMap = {
+  "取　手": "Toride",
+  "水海道": "Mitsukaido",
+  "下　館": "Shimodate",
+  "下　妻": "Shimotsuma",
+  "新守谷": "ShinMoriya",
+};
+const typeMap = { "普通": "Local", "快速": "Rapid" };
+
+const csvUpWeekday = `
+1002,取　手,,5:07,普通,2,2,2
+1004,取　手,,5:19,普通,1,2,4
+1006,取　手,,5:29,普通,2,2,2
+1008,取　手,,5:38,普通,2,2,2
+1010,取　手,,5:48,普通,2,2,2
+1012,取　手,,5:57,普通,2,2,2
+1014,取　手,,6:06,普通,2,2,2
+1016,取　手,,6:16,普通,2,2,2
+1018,取　手,,6:26,普通,2,2,2
+1020,取　手,,6:37,普通,2,2,2
+1022,取　手,,6:46,普通,2,2,2
+1024,取　手,,6:54,普通,2,2,2
+1026,取　手,,7:03,普通,2,2,2
+1028,取　手,,7:09,普通,2,2,2
+1030,取　手,,7:16,普通,2,2,2
+7032,取　手,,7:24,快速,2,2,2
+1034,取　手,,7:31,普通,2,2,2
+1036,取　手,,7:39,普通,2,2,2
+1040,取　手,,7:51,普通,2,2,2
+1044,取　手,始,8:00,普通,1,2,4
+1046,取　手,,8:07,普通,1,2,4
+1050,取　手,,8:18,普通,2,2,2
+1052,取　手,始,8:26,普通,1,2,13
+1054,取　手,,8:33,普通,1,2,4
+1056,取　手,,8:44,普通,1,2,4
+1058,取　手,,8:58,普通,2,2,2
+1060,取　手,,9:10,普通,2,2,2
+1062,取　手,始,9:21,普通,1,2,18
+1068,取　手,始,9:38,普通,1,2,5
+1070,取　手,,9:55,普通,2,2,2
+1072,取　手,,10:13,普通,2,2,2
+1074,取　手,,10:32,普通,2,2,2
+1076,取　手,,10:50,普通,2,2,2
+1078,取　手,,11:10,普通,2,2,2
+1080,取　手,,11:30,普通,2,2,2
+1084,取　手,,11:50,普通,2,2,2
+1086,取　手,,12:10,普通,2,2,2
+1088,取　手,,12:30,普通,2,2,2
+1090,取　手,,12:50,普通,2,2,2
+1092,取　手,,13:10,普通,2,2,2
+1094,取　手,,13:30,普通,2,2,2
+1096,取　手,,13:50,普通,2,2,2
+1098,取　手,,14:10,普通,2,2,2
+1100,取　手,,14:30,普通,2,2,2
+1102,取　手,,14:50,普通,2,2,2
+1104,取　手,,15:10,普通,2,2,2
+1106,取　手,,15:23,普通,2,2,2
+1108,取　手,,15:37,普通,2,2,2
+1110,取　手,,15:52,普通,1,2,3
+1112,取　手,,16:03,普通,1,2,4
+1114,取　手,,16:11,普通,2,2,2
+1118,取　手,始,16:23,普通,1,2,8
+1120,取　手,,16:40,普通,1,2,4
+1124,取　手,,16:56,普通,2,2,2
+1126,取　手,始,17:08,普通,1,2,19
+1128,取　手,,17:21,普通,1,2,10
+1130,取　手,,17:31,普通,1,2,5
+1132,取　手,,17:45,普通,1,2,3
+1134,取　手,,17:58,普通,2,2,2
+1136,取　手,,18:11,普通,2,2,2
+1138,取　手,,18:22,普通,2,2,2
+1140,取　手,,18:33,普通,2,2,2
+1144,取　手,,18:45,普通,2,2,2
+1146,取　手,,18:56,普通,2,2,2
+1148,取　手,,19:11,普通,2,2,2
+1150,取　手,,19:23,普通,2,2,2
+1152,取　手,,19:33,普通,2,2,2
+1154,取　手,,19:48,普通,1,2,3
+1156,取　手,,20:01,普通,1,2,5
+1158,取　手,,20:16,普通,1,2,7
+1160,取　手,,20:34,普通,2,2,2
+1162,取　手,,20:53,普通,2,2,2
+1164,取　手,,21:07,普通,2,2,2
+1166,取　手,,21:21,普通,2,2,2
+1168,取　手,,21:35,普通,2,2,2
+1170,取　手,,21:50,普通,2,2,2
+1172,取　手,,22:06,普通,2,2,2
+1174,取　手,,22:25,普通,2,2,2
+1176,取　手,,22:45,普通,2,2,2
+1178,取　手,,23:05,普通,2,2,2
+1180,取　手,,23:27,普通,1,2,4
+1182,取　手,,23:50,普通,1,2,7
+
+
+`;
+
+const csvDownWeekday = `
+5003,下　館,,5:19,普通,3,2,2
+4005,下　妻,,5:38,普通,3,2,2
+4009,下　妻,接,5:53,普通,3,2,2
+5013,下　館,,6:11,普通,3,2,2
+3015,水海道,,6:22,普通,3,2,2
+3017,水海道,,6:33,普通,4,2,4
+3019,水海道,,6:41,普通,4,2,5
+5021,下　館,,6:50,普通,4,2,3
+3023,水海道,,6:58,普通,3,2,2
+5025,下　館,,7:09,普通,4,2,3
+3027,水海道,,7:18,普通,4,2,3
+3029,水海道,,7:25,普通,3,2,2
+5031,下　館,,7:32,普通,3,2,2
+3033,水海道,,7:41,普通,3,2,2
+3035,水海道,,7:50,普通,3,2,2
+4037,下　妻,始,7:54,普通,4,2,9
+6041,新守谷,始,8:02普通,4,3,4
+3043,水海道,,8:06,普通,3,2,2
+3047,水海道,始,8:17,普通,4,3,5
+3049,水海道,,8:24,普通,3,2,2
+3051,下　館,乗,8:32,普通,3,2,2
+3053,水海道,,8:45,普通,4,2,3
+3055,水海道,,8:54,普通,3,2,2
+3059,下　館,乗,9:10,普通,4,2,3
+3061,水海道,,9:20,普通,3,2,2
+3063,水海道,始,9:30,普通,4,2,5
+3067,水海道,,9:37,普通,3,2,2
+7069,下　館,始,9:42,快速,4,1,9
+3071,下　館,乗,9:50,普通,3,2,2
+3073,水海道,,10:01,普通,3,2,2
+3075,水海道,,10:16,普通,3,2,2
+3077,水海道,,10:31,普通,3,2,2
+3079,下　館,乗,10:50,普通,4,2,3
+3081,水海道,,11:04,普通,3,2,2
+3083,水海道,,11:24,普通,3,2,2
+3085,水海道,,11:44,普通,3,2,2
+5087,下　館,始,11:53,普通,4,1,14
+3089,水海道,,12:04,普通,3,2,2
+3091,水海道,,12:24,普通,3,2,2
+3093,下　館,乗,12:44,普通,3,2,2
+3095,水海道,,13:04,普通,3,2,2
+3097,水海道,,13:24,普通,3,2,2
+3099,下　館,乗,13:44,普通,3,2,2
+3101,水海道,,14:04,普通,3,2,2
+3103,下　妻,乗,14:24,普通,3,2,2
+3105,下　館,乗,14:44,普通,3,2,2
+3107,水海道,,15:04,普通,3,2,2
+3109,下　館,乗,15:24,普通,3,2,2
+3111,下　妻,乗,15:44,普通,3,2,2
+3113,水海道,,16:05,普通,4,2,6
+3117,下　館,乗,16:26,普通,3,2,2
+6119,新守谷,始,16:35,普通,4,2,16
+3121,水海道,,16:42,普通,3,2,2
+3123,水海道,接,16:58,普通,3,2,2
+3127,水海道,,17:13,普通,4,2,5
+5129,下　館,,17:25,普通,4,2,5
+3131,水海道,,17:39,普通,4,2,4
+3133,下　館,乗,17:52,普通,3,2,3
+3135,水海道,,18:07,普通,4,2,3
+3137,下　妻,乗,18:20,普通,4,2,5
+3139,水海道,,18:28,普通,3,2,2
+3141,水海道,,18:42,普通,3,2,2
+7143,下　館,始,18:49,快速,4,1,12
+3145,下　館,乗,18:55,普通,3,2,2
+3147,水海道,,19:07,普通,3,2,2
+3149,下　館,乗,19:19,普通,3,2,2
+3151,水海道,,19:31,普通,3,2,2
+3153,水海道,,19:42,普通,3,2,2
+3155,下　館,乗,19:53,普通,3,2,2
+3157,水海道,,20:04,普通,3,2,2
+3159,水海道,,20:19,普通,3,2,2
+4161,下　妻,,20:34,普通,4,2,3
+3163,水海道,,20:48,普通,3,2,2
+3165,下　館,乗,21:02,普通,3,2,2
+3167,水海道,,21:17,普通,3,2,2
+3169,下　妻,乗,21:33,普通,4,2,4
+3171,水海道,,21:51,普通,4,2,3
+3173,下　館,乗,22:10,普通,4,2,5
+3175,水海道,,22:25,普通,3,2,2
+4177,下　妻,,22:43,普通,4,2,4
+3179,水海道,,22:59,普通,3,2,2
+3181,下　妻,乗,23:18,普通,4,2,3
+3183,水海道,,23:37,普通,3,2,3
+3185,水海道,,23:57,普通,3,2,2
+3187,水海道,,0:13,普通,3,2,2
+
+`;
+const csvUpHoliday = `
+1002,取　手, ,5:09,普通,1,2,4
+1004,取　手, ,5:26,普通,2,2,2
+1006,取　手, ,5:46,普通,2,2,2
+1008,取　手, ,6:06,普通,2,2,2
+1010,取　手, ,6:26,普通,2,2,2
+1012,取　手, ,6:44,普通,2,2,2
+1014,取　手, ,7:03,普通,2,2,2
+1016,取　手, ,7:18,普通,1,2,5
+1020,取　手, ,7:32,普通,2,2,2
+1022,取　手, ,7:44,普通,2,2,2
+7024,取　手, ,7:58,快速,1,2,11
+1030,取　手, ,8:14,普通,2,2,2
+1032,取　手, ,8:24,普通,2,2,2
+1034,取　手,始,8:35,普通,1,2,25
+1036,取　手, ,8:45,普通,1,2,4
+1038,取　手, ,9:01,普通,1,2,4
+1040,取　手, ,9:18,普通,1,2,4
+1044,取　手, ,9:35,普通,2,2,2
+1046,取　手, ,9:53,普通,2,2,2
+1048,取　手, ,10:12,普通,1,2,2
+1050,取　手, ,10:32,普通,2,2,2
+1052,取　手, ,10:52,普通,2,2,2
+1054,取　手, ,11:12,普通,2,2,2
+1056,取　手, ,11:32,普通,2,2,2
+1058,取　手, ,11:52,普通,2,2,2
+1060,取　手, ,12:12,普通,2,2,2
+1062,取　手, ,12:32,普通,2,2,2
+1064,取　手, ,12:52,普通,2,2,2
+1066,取　手, ,13:12,普通,2,2,2
+1068,取　手, ,13:32,普通,2,2,2
+1072,取　手, ,13:52,普通,2,2,2
+1074,取　手, ,14:12,普通,2,2,2
+1076,取　手, ,14:32,普通,2,2,2
+1078,取　手, ,14:51,普通,2,2,2
+1080,取　手, ,15:03,普通,2,2,2
+1082,取　手, ,15:13,普通,2,2,2
+1084,取　手, ,15:27,普通,1,2,6
+1086,取　手, ,15:38,普通,2,2,2
+1088,取　手, ,15:51,普通,2,2,2
+1090,取　手, ,16:03,普通,2,2,2
+1092,取　手, ,16:12,普通,2,2,2
+1094,取　手, ,16:23,普通,2,2,2
+1096,取　手, ,16:39,普通,2,2,2
+1098,取　手, ,16:56,普通,2,2,2
+1100,取　手, ,17:10,普通,2,2,2
+1102,取　手, ,17:24,普通,2,2,2
+1104,取　手, ,17:37,普通,1,2,4
+1108,取　手, ,17:50,普通,1,2,5
+1110,取　手, ,18:02,普通,2,2,2
+1112,取　手, ,18:16,普通,2,2,2
+1116,取　手, ,18:31,普通,2,2,2
+1118,取　手, ,18:43,普通,2,2,2
+1120,取　手, ,18:54,普通,2,2,2
+1122,取　手, ,19:06,普通,2,2,2
+1124,取　手, ,19:18,普通,2,2,2
+1126,取　手, ,19:28,普通,2,2,2
+1128,取　手, ,19:41,普通,1,2,4
+1130,取　手, ,19:54,普通,1,2,5
+1132,取　手, ,20:07,普通,2,2,2
+1134,取　手, ,20:25,普通,2,2,2
+1136,取　手, ,20:43,普通,2,2,2
+1138,取　手, ,21:00,普通,2,2,2
+1140,取　手, ,21:20,普通,1,2,5
+1142,取　手, ,21:38,普通,2,2,2
+1144,取　手, ,21:59,普通,1,2,4
+1146,取　手, ,22:20,普通,1,2,6
+1148,取　手, ,22:40,普通,2,2,2
+1150,取　手, ,23:02,普通,2,2,2
+1152,取　手, ,23:24,普通,2,2,2
+1154,取　手, ,23:50,普通,1,2,3
+
+`;
+
+const csvDownHoliday = `
+3003,下　館,乗,5:19,普通,3,2,2
+4005,下　妻, ,5:37,普通,3,2,2
+3007,水海道,接,5:56,普通,3,2,2
+3013,下　館,乗,6:15,普通,3,2,2
+3015,水海道, ,6:34,普通,3,2,2
+3017,下　館,乗,6:56,普通,4,2,5
+3019,下　館,乗,7:15,普通,3,2,2
+3021,水海道,始,7:27,普通,4,2,6
+3023,下　妻,乗,7:37,普通,4,2,7
+3025,水海道, ,7:52,普通,4,2,5
+6027,新守谷,始,7:59,普通,4,2,5
+3029,下　妻,乗,8:05,普通,4,2,3
+3031,水海道, ,8:18,普通,3,2,2
+3033,下　館,乗,8:33,普通,3,2,2
+3035,水海道, ,8:48,普通,4,2,3
+3037,水海道, ,9:03,普通,3,2,2
+3039,下　館,乗,9:16,普通,4,2,3
+3041,水海道, ,9:26,普通,4,2,3
+3043,水海道, ,9:35,普通,3,2,2
+7045,下　館,始,9:42,快速,4,1,14
+3047,下　館,乗,9:53,普通,4,2,3
+3049,水海道, ,10:09,普通,3,2,2
+3051,水海道, ,10:26,普通,3,2,2
+3053,下　館,乗,10:46,普通,3,2,2
+3055,下　妻,乗,11:05,普通,3,2,2
+3057,下　館,乗,11:25,普通,3,2,2
+3059,水海道, ,11:45,普通,3,2,2
+3061,下　館,乗,12:05,普通,3,2,2
+3063,水海道, ,12:25,普通,3,2,2
+3065,下　妻,乗,12:45,普通,3,2,2
+3067,水海道, ,13:05,普通,3,2,2
+3069,下　館,乗,13:25,普通,3,2,2
+3071,水海道, ,13:45,普通,3,2,2
+3073,水海道,始,13:54,普通,4,2,17
+3075,水海道, ,14:05,普通,3,2,2
+3077,下　館,乗,14:25,普通,3,2,2
+3079,水海道, ,14:45,普通,3,2,2
+3081,水海道, ,15:05,普通,3,2,2
+3083,下　館,乗,15:25,普通,3,2,2
+3085,水海道, ,15:45,普通,3,2,2
+3087,下　妻,乗,15:57,普通,3,2,2
+3089,水海道, ,16:09,普通,3,2,2
+3091,下　館,乗,16:23,普通,3,2,2
+3093,水海道, ,16:35,普通,3,2,2
+3095,水海道, ,16:44,普通,3,2,2
+3097,下　館,乗,16:56,普通,3,2,2
+3099,水海道, ,17:08,普通,3,2,2
+3101,水海道, ,17:17,普通,3,2,2
+3103,下　館,乗,17:28,普通,3,2,2
+3105,水海道, ,17:44,普通,3,2,2
+5107,下　館,始,17:53,普通,4,1,14
+3109,水海道, ,18:03,普通,4,2,4
+3111,水海道, ,18:15,普通,3,2,2
+3113,水海道, ,18:26,普通,3,2,2
+3115,水海道, ,18:37,普通,3,2,2
+7117,下　館,始,18:45,快速,4,1,23
+3119,水海道, ,18:52,普通,3,2,2
+3121,下　館,乗,19:04,普通,4,2,3
+3123,水海道, ,19:18,普通,3,2,2
+3125,下　妻,乗,19:31,普通,3,2,2
+3127,水海道, ,19:44,普通,3,2,2
+3129,水海道, ,19:56,普通,3,2,2
+3131,下　館,乗,20:11,普通,4,2,4
+3133,水海道, ,20:23,普通,3,2,2
+3135,水海道, ,20:41,普通,3,2,2
+3137,下　館,乗,20:59,普通,3,2,2
+3139,水海道, ,21:17,普通,3,2,2
+4141,下　妻,,21:37,普通,4,2,5
+3143,下　館,乗,21:56,普通,3,2,2
+3145,水海道, ,22:14,普通,3,2,2
+4147,下　妻, ,22:38,普通,4,2,6
+3149,水海道, ,22:58,普通,4,2,6
+3151,下　妻,乗,23:24,普通,4,2,10
+3153,水海道, ,23:42,普通,4,2,9
+3155,水海道, ,23:57,普通,3,2,2
+3157,水海道, ,0:13,普通,3,2,2
+
+`;
+
+let trainsUp = [];
+let trainsDown = [];
+let currentDayType = "";
+
+function loadTimetableByDayType(){
+  const now = new Date();
+  const week = now.getDay(); // 0=日
+  const isWeekend = (week === 0 || week === 6);
+  const isHoliday = isJapaneseHoliday(now);
+
+  const dayType = (isWeekend || isHoliday) ? "holiday" : "weekday";
+
+  // 同じ種別なら再読み込みしない
+  if(currentDayType === dayType) return;
+
+  currentDayType = dayType;
+
+  if(dayType === "holiday"){
+    trainsUp = parseCsv(csvUpHoliday);
+    trainsDown = parseCsv(csvDownHoliday);
+    console.log("休日ダイヤ読み込み");
+  } else {
+    trainsUp = parseCsv(csvUpWeekday);
+    trainsDown = parseCsv(csvDownWeekday);
+    console.log("平日ダイヤ読み込み");
+  }
+
+  updateBoard();
+  updateNextTrains();
+}
+
+
+function parseCsv(csv){
+  return csv.trim().split('\n').map(line=>{
+    const c = line.split(',');
+    return {
+      no: c[0],
+      dest: c[1],
+      track: c[2],
+      time: c[3],
+      type: c[4],
+      trackno: c[5],
+      cars: c[6],
+      arrivalMin: Number(c[7] || 1)   // ←追加（未設定なら1分前）
+    };
+  });
+}
+setInterval(loadTimetableByDayType, 60 * 1000);
+
+
+/* ===== 案内文生成（既存そのまま） ===== */
+// 行先の空白を削除するユーティリティ
+function normalizeDest(dest) {
+  return dest.replace(/\s+/g, '');
+}
+
+// 上り列車用の案内文生成
+function generateGuideMessageUp(train) {
+  if (!train) return "";
+  const dest = normalizeDest(train.dest);
+
+  if (train.track === "乗") return `こんどの${dest}行きは水海道にて乗り換えとなります。`;
+  if (train.track === "始") return `こんどの${dest}行きは当駅始発の列車です。`;
+  if (train.track === "接") return `こんどの${dest}行きは水海道にて快速に接続いたします。`;
+
+  if (train.cars === "1") return `こんどの${dest}行きは1両編成でまいります。`;
+  if (train.type === "快速") return `終点取手まで各駅に停車いたします。`;
+
+  if (train.no === "") return `本日の上り列車はすべて終了いたしました。`;
+
+  return `こんどの${dest}行のご案内です`;
+}
+
+// 下り列車用の案内文生成
+function generateGuideMessageDown(train) {
+  if (!train) return "";
+  const dest = normalizeDest(train.dest);
+
+  if (train.track === "乗") return `こんどの${dest}行きは水海道にて乗り換えとなります。`;
+  if (train.track === "始") return `こんどの${dest}行きは当駅始発の列車です。`;
+  if (train.track === "接") return `こんどの${dest}行きは水海道にて快速に接続いたします。`;
+
+  if (train.cars === "1") return `こんどの${dest}行きは1両編成でまいります。`;
+  if (train.type === "快速") return `こんどの${dest}行きは快速列車です。停車駅にご注意ください。`;
+
+  return `こんどの${dest}行のご案内です`;
+}
+/* ===== 判定 ===== */
+const delays = {}; // 遅延情報 { "1002": 5 }
+
+function getRemainingTime(train){
+  if(!train) return Infinity;
+
+  const now = new Date();
+  const [h,m] = train.time.split(':').map(Number);
+
+  // 発車時刻オブジェクト
+  let dep = new Date(now);
+  dep.setHours(h, m, 0, 0);
+
+  // 遅延時間を加算
+  const delay = delays[train.no] || 0;
+  dep.setMinutes(dep.getMinutes() + delay);
+
+  // 日付跨ぎ補正（4時基準）
+  const nowH = now.getHours();
+  if (h < 4 && nowH >= 4) {
+    // 発車時刻が0-3時台で、現在時刻が4時以降なら翌日の列車
+    dep.setDate(dep.getDate() + 1);
+  } else if (h >= 4 && nowH < 4) {
+    // 発車時刻が4時以降で、現在時刻が0-3時台の場合、前日の列車
+    dep.setDate(dep.getDate() - 1);
+  }
+
+  return (dep - now)/1000; // 残り秒
+}
+
+
+function isArrivingSoon(train){
+  if(!train) return false;
+
+  const diffSec = getRemainingTime(train);
+
+  // 表示開始時刻（分）
+  const beforeSec = (train.arrivalMin || 1) * 60;
+
+  // 表示開始から1分間だけ表示
+  return diffSec <= beforeSec && diffSec > beforeSec - 60;
+}
+
+
+function getNextTrains(trains){
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  return trains.filter(t=>{
+    const [h,m] = t.time.split(':').map(Number);
+    const delay = delays[t.no] || 0;
+    let trainMinutes = h*60 + m + delay;
+
+    // 0時台～3:59は日付跨ぎとして加算24h
+    if(h < 4 && now.getHours() >= 4){
+      trainMinutes += 24*60;
+    }
+
+    return trainMinutes > nowMinutes;
+  }).slice(0,2);
+}
+
+
+/* ===== 表示 ===== */
+let showGuideSecondRow = false;
+let currentGuideMessageUp = "";
+let currentGuideMessageDown = "";
+let manualDayType = null; // "weekday" | "holiday" | null
+
+// 案内スクロールを2分ごとに1回だけ表示
+function showGuideOnce(){
+  const upTrains = getNextTrains(trainsUp);
+  const downTrains = getNextTrains(trainsDown);
+
+  const firstTrainUp = upTrains[0];
+  const firstTrainDown = downTrains[0];
+
+  currentGuideMessageUp = generateGuideMessageUp(firstTrainUp);
+  currentGuideMessageDown = generateGuideMessageDown(firstTrainDown);
+
+  showGuideSecondRow = true;
+  updateBoard();
+
+  setTimeout(()=>{
+    showGuideSecondRow = false;
+    updateBoard();
+  },15000);
+}
+
+setInterval(showGuideOnce, 30000);
+
+/* 30秒ごとの表示切替 */
+let showDelayNormal = true;
+setInterval(()=>{
+  showDelayNormal = !showDelayNormal;
+  updateBoard();
+}, 30000);
+
+/* ===== 行レンダリング ===== */
+function renderRow(train){
+  if(!train) return `<div class="row" style="height:50px;"></div>`;
+
+  const delay = delays[train.no] || 0;
+  const depTimeStr = train.time;
+
+  let displayTimeHtml;
+  if(delay > 0){
+    displayTimeHtml = showDelayNormal
+      ? `<span>${depTimeStr}</span>`
+      : `<span class="delay">遅れ${delay}分</span>`;
+  } else {
+    displayTimeHtml = `<span>${depTimeStr}</span>`;
+  }
+
+  return `
+    <div class="row">
+      <div class="type ${train.type==='快速'?'rapid':''}">
+        ${lang==='ja'?train.type:typeMap[train.type]}
+      </div>
+      <div class="dest">${lang==='ja'?train.dest:destMap[train.dest]}</div>
+      <div class="time2">${displayTimeHtml}</div>
+      <div class="cars">
+        ${train.cars}<span class="suffix">${lang==='ja'?'両':(train.cars==='1'?'Car':'Cars')}</span>
+      </div>
+      <div class="track">${train.trackno}</div>
+    </div>
+  `;
+}
+
+function renderBlock(b){
+  const firstTrain = b.trains[0];
+  const secondTrain = b.trains[1];
+  const arriving = firstTrain ? isArrivingSoon(firstTrain) : false;
+
+  let html = `
+  <div class="block">
+    <div class="block-title">
+      <div class="no">${b.noLeft}</div>
+      <div style="text-align:center">${b.title}</div>
+      <div class="no">${b.noRight}</div>
+    </div>
+    <div class="header">
+      <div>種別</div><div>行先</div><div>発車時刻</div><div>両</div><div>番線</div>
+    </div>
+    <div class="table">`;
+
+  // 1行目
+  html += renderRow(firstTrain);
+
+  // 2行目
+  if(arriving){
+    html += `<div class="row arrival blink"><div>列車がまいります</div></div>`;
+  } else if(showGuideSecondRow){
+    const msg = b.title.includes("上り") ? currentGuideMessageUp : currentGuideMessageDown;
+    if(msg && !msg.includes("ご案内です")){
+      html += `<div class="row arrival scroll"><div><span>${msg}</span></div></div>`;
+    } else {
+      html += renderRow(secondTrain);
+    }
+  } else {
+    html += renderRow(secondTrain);
+  }
+
+  html += `</div></div>`;
+  return html;
+}
+
+/* ===== ボード更新 ===== */
+function updateBoard(){
+  const board=document.getElementById("board");
+  const up={noLeft:"2",noRight:"1",title:"上り　戸頭・取手方面",trains:getNextTrains(trainsUp)};
+  const down={noLeft:"4",noRight:"3",title:"下り　水海道・下館方面",trains:getNextTrains(trainsDown)};
+  board.innerHTML = window.innerWidth>=1250
+    ? `<div>${renderBlock(down)}</div><div>${renderBlock(up)}</div>`
+    : `<div>${renderBlock(up)}</div><div>${renderBlock(down)}</div>`;
+}
+
+/* ===== 現在時刻 & 次列車更新 ===== */
+function updateTime(){
+  const d = new Date();
+  document.getElementById("now").textContent =
+    d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0');
+  updateNextTrains();
+}
+
+
+/* ===== 遅延設定 ===== */
+document.getElementById("addDelay").addEventListener("click", ()=>{
+  const trainNo = document.getElementById("delayTrainNo").value.trim();
+  const minutes = parseInt(document.getElementById("delayMinutes").value, 10);
+  if(!trainNo || isNaN(minutes)) return alert("列車番号と遅延時間を正しく入力してください");
+  
+  delays[trainNo] = minutes;
+  alert(`${trainNo}号列車に${minutes}分の遅延を設定しました`);
+  updateBoard();
+});
+
+/* ===== 初期処理 ===== */
+let lang='ja';
+setInterval(()=>{
+  lang = (lang==='ja') ? 'en':'ja';
+  updateBoard();
+},15000);
+
+// 日本の祝日（必要に応じて追加・更新）
+const holidays = {
+  2026: [
+    "2026-01-01", // 元日
+    "2026-01-12", // 成人の日
+    "2026-02-11", // 建国記念の日
+    "2026-02-23", // 天皇誕生日
+    "2026-03-20", // 春分の日
+    "2026-04-29", // 昭和の日
+    "2026-05-03", // 憲法記念日
+    "2026-05-04", // みどりの日
+    "2026-05-05", // こどもの日
+    "2026-07-20", // 海の日
+    "2026-08-11", // 山の日
+    "2026-09-21", // 敬老の日
+    "2026-09-23", // 秋分の日
+    "2026-10-12", // スポーツの日
+    "2026-11-03", // 文化の日
+    "2026-11-23"  // 勤労感謝の日
+  ]
+};
+
+function updateDateInfo(){
+  const d = new Date();
+
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+
+  const week = d.getDay(); // 0=日,6=土
+  const isWeekend = (week === 0 || week === 6);
+  const isHoliday = isJapaneseHoliday(d);
+
+  document.getElementById("todayDate").textContent =
+    `${y}年${m.toString().padStart(2,'0')}月${day.toString().padStart(2,'0')}日`;
+
+  document.getElementById("dayType").textContent =
+    (isWeekend || isHoliday) ? "休日ダイヤ" : "平日ダイヤ";
+}
+
+// 祝日判定
+function isJapaneseHoliday(date){
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, "0");
+  const d = date.getDate().toString().padStart(2, "0");
+  const key = `${y}-${m}-${d}`;
+
+  return holidays[y]?.includes(key) ?? false;
+}
+
+function loadTimetableByDayType(){
+  let dayType;
+
+  if(manualDayType){
+    dayType = manualDayType; // 手動優先
+  } else {
+    const now = new Date();
+    const week = now.getDay();
+    const isWeekend = (week === 0 || week === 6);
+    const isHoliday = isJapaneseHoliday(now);
+    dayType = (isWeekend || isHoliday) ? "holiday" : "weekday";
+  }
+
+  if(currentDayType === dayType) return;
+  currentDayType = dayType;
+
+  if(dayType === "holiday"){
+    trainsUp = parseCsv(csvUpHoliday);
+    trainsDown = parseCsv(csvDownHoliday);
+  } else {
+    trainsUp = parseCsv(csvUpWeekday);
+    trainsDown = parseCsv(csvDownWeekday);
+  }
+
+  updateBoard();
+  updateNextTrains();
+  updateTimetableStatus();
+}
+
+document.getElementById("btnAuto").addEventListener("click", ()=>{
+  manualDayType = null;
+  loadTimetableByDayType();
+  setActiveButton("btnAuto");
+});
+
+document.getElementById("btnWeekday").addEventListener("click", ()=>{
+  manualDayType = "weekday";
+  loadTimetableByDayType();
+  setActiveButton("btnWeekday");
+});
+
+document.getElementById("btnHoliday").addEventListener("click", ()=>{
+  manualDayType = "holiday";
+  loadTimetableByDayType();
+  setActiveButton("btnHoliday");
+});
+
+function updateTimetableStatus(){
+  const el = document.getElementById("timetableStatus");
+  if(manualDayType === "weekday"){
+    el.textContent = "【平日ダイヤ 手動指定】";
+  } else if(manualDayType === "holiday"){
+    el.textContent = "【休日ダイヤ 手動指定】";
+  } else {
+    el.textContent = "【自動切替中】";
+  }
+}
+
+// 初回 & 日付切替対策
+updateDateInfo();
+setInterval(updateDateInfo, 60 * 1000);
+
+updateTime();
+updateBoard();
+setInterval(updateTime,1000);
+window.addEventListener('resize',updateBoard);
+
+</script>
+
+<script>
+/* ========================================
+   スイッチ操作
+======================================== */
+
+(() => {
+
+    const mel = new Audio("mel.mp3");
+    const cls = new Audio("cls.mp3");
+
+    mel.preload = "auto";
+    cls.preload = "auto";
+    mel.loop = true;
+
+
+    const switches = document.querySelectorAll(".switch");
+
+
+    switches.forEach((switchElement) => {
+
+        const onButton =
+            switchElement.querySelector(".on-button");
+
+        const offButton =
+            switchElement.querySelector(".off-button");
+
+        const status =
+            switchElement.querySelector(".status");
+
+
+        /* ================================
+           ON
+        ================================= */
+
+        onButton.addEventListener("click", async () => {
+
+            // すでにONなら何もしない
+            if (onButton.classList.contains("pressed")) {
+                return;
+            }
+
+            // ONボタンを押し込む
+            onButton.classList.add("pressed");
+
+            // 状態表示
+            switchElement.classList.add("is-on");
+            status.textContent = "ON";
+
+
+            // cls停止
+            cls.pause();
+            cls.currentTime = 0;
+
+
+            // melを最初から再生
+            mel.pause();
+            mel.currentTime = 0;
+
+            try {
+
+                await mel.play();
+
+            } catch (error) {
+
+                console.error("mel.mp3再生エラー:", error);
+
+                // 再生できなかった場合はON解除
+                onButton.classList.remove("pressed");
+                switchElement.classList.remove("is-on");
+                status.textContent = "OFF";
+            }
+
+        });
+
+
+        /* ================================
+           OFF
+        ================================= */
+
+        offButton.addEventListener("click", async () => {
+
+            // ONだったか確認
+            const wasOn =
+                onButton.classList.contains("pressed");
+
+
+            // ON → OFFの場合だけmel停止
+            if (wasOn) {
+
+                mel.pause();
+                mel.currentTime = 0;
+
+            }
+
+
+            // ONボタンを戻す
+            onButton.classList.remove("pressed");
+
+            // OFF表示
+            switchElement.classList.remove("is-on");
+            status.textContent = "OFF";
+
+
+            // ON → OFFの場合だけcls再生
+            if (wasOn) {
+
+                cls.pause();
+                cls.currentTime = 0;
+
+                try {
+
+                    await cls.play();
+
+                } catch (error) {
+
+                    console.error("cls.mp3再生エラー:", error);
+
+                }
+
+            }
+
+        });
+
+    });
+
+})();
+</script>
+
+
+</body>
+</html>
