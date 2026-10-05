@@ -2033,15 +2033,28 @@ window.addEventListener('resize',updateBoard);
 const upSound = new Audio("up.mp3");
 const downSound = new Audio("dw.mp3");
 
+const upJingle = new Audio("uj.mp3");
+const downJingle = new Audio("dj.mp3");
+
 upSound.preload = "auto";
 downSound.preload = "auto";
+upJingle.preload = "auto";
+downJingle.preload = "auto";
 
 upSound.loop = true;
 downSound.loop = true;
 
+// 前回の接近状態
+let wasUpApproaching = false;
+let wasDownApproaching = false;
+
+
 function updateApproachSound() {
 
-    // 上り・下りそれぞれの接近状態を確認
+    // ================================
+    // 現在の接近状態
+    // ================================
+
     const upApproaching =
         document.querySelector(
             '.block[data-direction="up"] .row.arrival.blink'
@@ -2054,11 +2067,18 @@ function updateApproachSound() {
 
 
     // ================================
-    // 上り接近
+    // 上り
     // ================================
+
     if (upApproaching) {
 
+        // 接近中 → ujを停止
+        upJingle.pause();
+        upJingle.currentTime = 0;
+
+        // up.mp3を再生
         if (upSound.paused) {
+
             upSound.currentTime = 0;
 
             upSound.play().catch(error => {
@@ -2068,17 +2088,35 @@ function updateApproachSound() {
 
     } else {
 
+        // 接近終了
         upSound.pause();
         upSound.currentTime = 0;
+
+        // 前回は接近中だった場合のみuj.mp3を1回再生
+        if (wasUpApproaching) {
+
+            upJingle.currentTime = 0;
+
+            upJingle.play().catch(error => {
+                console.error("uj.mp3再生エラー:", error);
+            });
+        }
     }
 
 
     // ================================
-    // 下り接近
+    // 下り
     // ================================
+
     if (downApproaching) {
 
+        // 接近中 → djを停止
+        downJingle.pause();
+        downJingle.currentTime = 0;
+
+        // dw.mp3を再生
         if (downSound.paused) {
+
             downSound.currentTime = 0;
 
             downSound.play().catch(error => {
@@ -2088,9 +2126,28 @@ function updateApproachSound() {
 
     } else {
 
+        // 接近終了
         downSound.pause();
         downSound.currentTime = 0;
+
+        // 前回は接近中だった場合のみdj.mp3を1回再生
+        if (wasDownApproaching) {
+
+            downJingle.currentTime = 0;
+
+            downJingle.play().catch(error => {
+                console.error("dj.mp3再生エラー:", error);
+            });
+        }
     }
+
+
+    // ================================
+    // 状態を保存
+    // ================================
+
+    wasUpApproaching = upApproaching;
+    wasDownApproaching = downApproaching;
 }
 
 
