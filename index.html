@@ -1856,7 +1856,7 @@ function renderBlock(b){
 function updateBoard(){
   const board = document.getElementById("board");
 
-  const up = {
+const up = {
   noLeft: "2",
   noRight: "1",
   title: "上り　取手方面",
@@ -1871,6 +1871,7 @@ const down = {
   direction: "down",
   trains: getNextTrains(trainsDown)
 };
+
 
 
   board.innerHTML = window.innerWidth >= 1250
@@ -2040,33 +2041,22 @@ downSound.loop = true;
 
 function updateApproachSound() {
 
-    // 接近表示されているブロックを取得
-    const approachingBlock =
-        document.querySelector(".block .row.arrival.blink")
-            ?.closest(".block");
+    // 上り・下りそれぞれの接近状態を確認
+    const upApproaching =
+        document.querySelector(
+            '.block[data-direction="up"] .row.arrival.blink'
+        ) !== null;
 
-    // 接近していない
-    if (!approachingBlock) {
+    const downApproaching =
+        document.querySelector(
+            '.block[data-direction="down"] .row.arrival.blink'
+        ) !== null;
 
-        upSound.pause();
-        upSound.currentTime = 0;
-
-        downSound.pause();
-        downSound.currentTime = 0;
-
-        return;
-    }
-
-    const direction =
-        approachingBlock.dataset.direction;
 
     // ================================
-    // 上り
+    // 上り接近
     // ================================
-    if (direction === "up") {
-
-        downSound.pause();
-        downSound.currentTime = 0;
+    if (upApproaching) {
 
         if (upSound.paused) {
             upSound.currentTime = 0;
@@ -2076,15 +2066,17 @@ function updateApproachSound() {
             });
         }
 
-    }
-
-    // ================================
-    // 下り
-    // ================================
-    else if (direction === "down") {
+    } else {
 
         upSound.pause();
         upSound.currentTime = 0;
+    }
+
+
+    // ================================
+    // 下り接近
+    // ================================
+    if (downApproaching) {
 
         if (downSound.paused) {
             downSound.currentTime = 0;
@@ -2093,8 +2085,14 @@ function updateApproachSound() {
                 console.error("dw.mp3再生エラー:", error);
             });
         }
+
+    } else {
+
+        downSound.pause();
+        downSound.currentTime = 0;
     }
 }
+
 
 
 
