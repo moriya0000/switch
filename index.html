@@ -1820,7 +1820,7 @@ function renderBlock(b){
   const arriving = firstTrain ? isArrivingSoon(firstTrain) : false;
 
   let html = `
-  <div class="block">
+  <div class="block" data-direction="${b.direction}">
     <div class="block-title">
       <div class="no">${b.noLeft}</div>
       <div style="text-align:center">${b.title}</div>
@@ -1857,18 +1857,21 @@ function updateBoard(){
   const board = document.getElementById("board");
 
   const up = {
-    noLeft: "2",
-    noRight: "1",
-    title: "上り　取手方面",
-    trains: getNextTrains(trainsUp)
-  };
+  noLeft: "2",
+  noRight: "1",
+  title: "上り　取手方面",
+  direction: "up",
+  trains: getNextTrains(trainsUp)
+};
 
-  const down = {
-    noLeft: "4",
-    noRight: "3",
-    title: "下り　守谷・水海道・下館方面",
-    trains: getNextTrains(trainsDown)
-  };
+const down = {
+  noLeft: "4",
+  noRight: "3",
+  title: "下り　守谷・水海道・下館方面",
+  direction: "down",
+  trains: getNextTrains(trainsDown)
+};
+
 
   board.innerHTML = window.innerWidth >= 1250
     ? `<div>${renderBlock(down)}</div><div>${renderBlock(up)}</div>`
@@ -2026,30 +2029,74 @@ window.addEventListener('resize',updateBoard);
 </script>
 
 <script>
+const upSound = new Audio("up.mp3");
+const downSound = new Audio("dw.mp3");
 
-const app = new Audio("app.mp3");
-app.preload = "auto";
-app.loop = true;
+upSound.preload = "auto";
+downSound.preload = "auto";
+
+upSound.loop = true;
+downSound.loop = true;
 
 function updateApproachSound() {
-    const isApproaching =
-        document.querySelector(".row.arrival.blink") !== null;
 
-    if (isApproaching) {
-        if (app.paused) {
-            app.currentTime = 0;
+    // 接近表示されているブロックを取得
+    const approachingBlock =
+        document.querySelector(".block .row.arrival.blink")
+            ?.closest(".block");
 
-            app.play().catch(error => {
-                console.error("app.mp3再生エラー:", error);
+    // 接近していない
+    if (!approachingBlock) {
+
+        upSound.pause();
+        upSound.currentTime = 0;
+
+        downSound.pause();
+        downSound.currentTime = 0;
+
+        return;
+    }
+
+    const direction =
+        approachingBlock.dataset.direction;
+
+    // ================================
+    // 上り
+    // ================================
+    if (direction === "up") {
+
+        downSound.pause();
+        downSound.currentTime = 0;
+
+        if (upSound.paused) {
+            upSound.currentTime = 0;
+
+            upSound.play().catch(error => {
+                console.error("up.mp3再生エラー:", error);
             });
         }
-    } else {
-        if (!app.paused) {
-            app.pause();
-            app.currentTime = 0;
+
+    }
+
+    // ================================
+    // 下り
+    // ================================
+    else if (direction === "down") {
+
+        upSound.pause();
+        upSound.currentTime = 0;
+
+        if (downSound.paused) {
+            downSound.currentTime = 0;
+
+            downSound.play().catch(error => {
+                console.error("dw.mp3再生エラー:", error);
+            });
         }
     }
 }
+
+
 
 /* ========================================
    スイッチ操作
