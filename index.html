@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>関鉄発車標 ver1.6</title>
+<title>関鉄発車標 ver1.7</title>
 <link rel="shortcut icon" href="https://www.kantetsu.co.jp/cms/wp-content/themes/kr/img/favicon/favicon.ico">
 <style>
 body {
@@ -140,12 +140,19 @@ body {
 }
 
 
+.row.arrival.scroll {
+  position: relative;
+  overflow: hidden;
+}
+
 .row.arrival.scroll span {
   display: inline-block;
-  min-width: 100%;
+  white-space: nowrap;
   padding-left: 100%;
-  animation: scrollText 12s linear;
+  animation: scrollText 12s linear forwards;
+  will-change: transform;
 }
+
 
 /* 点滅 */
 @keyframes blink {
@@ -1900,31 +1907,47 @@ function renderBlock(b){
 
 /* ===== ボード更新 ===== */
 function updateBoard(){
+
   const board = document.getElementById("board");
 
-const up = {
-  noLeft: "2",
-  noRight: "1",
-  title: "上り　取手方面",
-  direction: "up",
-  trains: getNextTrains(trainsUp)
-};
+  const up = {
+    noLeft: "",
+    noRight: "",
+    title: "上り　取手方面",
+    direction: "up",
+    trains: getNextTrains(trainsUp)
+  };
 
-const down = {
-  noLeft: "4",
-  noRight: "3",
-  title: "下り　守谷・水海道・下館方面",
-  direction: "down",
-  trains: getNextTrains(trainsDown)
-};
+  const down = {
+    noLeft: "",
+    noRight: "",
+    title: "下り　守谷・水海道・下館方面",
+    direction: "down",
+    trains: getNextTrains(trainsDown)
+  };
 
+  /*
+   * 案内スクロール中はDOMを再生成しない。
+   *
+   * updateTime() が1秒ごとに呼ばれるため、
+   * board.innerHTMLを書き換えるとCSS animationが
+   * 毎秒0%に戻ってしまう。
+   */
+  const scrolling =
+    board.querySelector(".row.arrival.scroll");
 
+  if (scrolling) {
+
+    /*
+     * 現在表示中の案内がまだ有効なら、
+     * スクロールDOMをそのまま維持する。
+     */
+    return;
+  }
 
   board.innerHTML = window.innerWidth >= 1250
     ? `<div>${renderBlock(down)}</div><div>${renderBlock(up)}</div>`
     : `<div>${renderBlock(up)}</div><div>${renderBlock(down)}</div>`;
-
-
 }
 
 
