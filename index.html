@@ -1924,10 +1924,7 @@ const down = {
     ? `<div>${renderBlock(down)}</div><div>${renderBlock(up)}</div>`
     : `<div>${renderBlock(up)}</div><div>${renderBlock(down)}</div>`;
 
-  // 「列車がまいります」の表示状態に合わせてapp.mp3を制御
-if (typeof updateApproachSound === "function") {
-    updateApproachSound();
-}
+
 }
 
 
@@ -2110,94 +2107,185 @@ window.addEventListener('resize',updateBoard);
 
 <script>
 /* =========================================================
-   音声システム
+   音声システム 完成版
    iPad / iPhone Safari対応
    ========================================================= */
 
-const upSound = new Audio("up.mp3");
-const downSound = new Audio("dw.mp3");
-
-const upJingle = new Audio("uj.mp3");
-const downJingle = new Audio("dj.mp3");
-
-const mel = new Audio("mel.mp3");
-const cls = new Audio("cls.mp3");
 
 /* =========================================================
-   音声デバッグ表示
+   音声ファイル
+   ========================================================= */
+
+const upSound = new Audio("./up.mp3");
+const downSound = new Audio("./dw.mp3");
+
+const upJingle = new Audio("./uj.mp3");
+const downJingle = new Audio("./dj.mp3");
+
+const mel = new Audio("./mel.mp3");
+const cls = new Audio("./cls.mp3");
+
+
+/* =========================================================
+   音声一覧
+   ========================================================= */
+
+const audioList = [
+    upSound,
+    downSound,
+    upJingle,
+    downJingle,
+    mel,
+    cls
+];
+
+
+/* =========================================================
+   基本設定
+   ========================================================= */
+
+audioList.forEach(audio => {
+
+    audio.preload = "auto";
+
+    /*
+     * 音声ファイルを読み込む
+     */
+    audio.load();
+
+});
+
+
+upSound.loop = true;
+downSound.loop = true;
+mel.loop = true;
+
+
+/* =========================================================
+   音声有効状態
+   ========================================================= */
+
+let audioEnabled = false;
+
+
+/* =========================================================
+   接近状態
+   ========================================================= */
+
+let wasUpApproaching = false;
+let wasDownApproaching = false;
+
+
+/* =========================================================
+   ジングル状態
+   ========================================================= */
+
+let upJinglePlaying = false;
+let downJinglePlaying = false;
+
+
+/* =========================================================
+   音声デバッグ
    ========================================================= */
 
 function updateAudioDebug() {
 
-  const debug =
-    document.getElementById("audioDebug");
+    const debug =
+        document.getElementById("audioDebug");
 
-  if (!debug) return;
+    if (!debug) return;
 
 
-  function state(audio) {
+    function state(audio) {
 
-    if (!audio) {
-      return "存在しません";
+        if (!audio) {
+            return "存在しません";
+        }
+
+        if (audio.error) {
+
+            return (
+                "ERROR " +
+                audio.error.code +
+                " / " +
+                (audio.error.message || "")
+            );
+
+        }
+
+        if (audio.ended) {
+            return "終了";
+        }
+
+        if (audio.paused) {
+            return "停止中";
+        }
+
+        return "再生中";
     }
 
-    if (audio.error) {
-      return "ERROR";
+
+    function time(audio) {
+
+        if (!audio) {
+            return "----";
+        }
+
+        return Number.isFinite(audio.currentTime)
+            ? audio.currentTime.toFixed(2)
+            : "----";
     }
 
-    if (audio.ended) {
-      return "終了";
+
+    function ready(audio) {
+
+        if (!audio) {
+            return "----";
+        }
+
+        return audio.readyState;
     }
 
-    if (audio.paused) {
-      return "停止中";
-    }
 
-    return "再生中";
-  }
-
-
-  function time(audio) {
-
-    if (!audio) return "----";
-
-    return Number.isFinite(audio.currentTime)
-      ? audio.currentTime.toFixed(2)
-      : "----";
-  }
-
-
-  debug.textContent =
+    debug.textContent =
 `===== 音声デバッグ =====
 
 音声有効:
 ${audioEnabled ? "YES" : "NO"}
 
+--------------------------------
+
 up.mp3
 状態: ${state(upSound)}
 時間: ${time(upSound)}
+readyState: ${ready(upSound)}
 
 dw.mp3
 状態: ${state(downSound)}
 時間: ${time(downSound)}
+readyState: ${ready(downSound)}
 
 uj.mp3
 状態: ${state(upJingle)}
 時間: ${time(upJingle)}
+readyState: ${ready(upJingle)}
 
 dj.mp3
 状態: ${state(downJingle)}
 時間: ${time(downJingle)}
+readyState: ${ready(downJingle)}
 
 mel.mp3
 状態: ${state(mel)}
 時間: ${time(mel)}
+readyState: ${ready(mel)}
 
 cls.mp3
 状態: ${state(cls)}
 時間: ${time(cls)}
+readyState: ${ready(cls)}
 
-------------------------
+--------------------------------
 
 上り接近:
 ${wasUpApproaching ? "YES" : "NO"}
@@ -2214,165 +2302,70 @@ ${downJinglePlaying ? "PLAYING" : "STOP"}
 }
 
 
-/* ---------------------------------------------------------
-   基本設定
---------------------------------------------------------- */
-
-const audioList = [
-    upSound,
-    downSound,
-    upJingle,
-    downJingle,
-    mel,
-    cls
-];
+/* =========================================================
+   音声エラー監視
+   ========================================================= */
 
 audioList.forEach(audio => {
 
-    audio.preload = "auto";
+    audio.addEventListener("error", () => {
 
-    /*
-     * iPad Safariで音声を扱うため、
-     * Audioオブジェクトを最初から保持しておく
-     */
-    audio.load();
+        console.error(
+            "[音声ファイルエラー]",
+            audio.src,
+            audio.error
+        );
+
+        updateAudioDebug();
+
+    });
+
+
+    audio.addEventListener("loadeddata", () => {
+
+        console.log(
+            "[音声読み込み完了]",
+            audio.src
+        );
+
+        updateAudioDebug();
+
+    });
 
 });
 
 
-upSound.loop = true;
-downSound.loop = true;
-mel.loop = true;
+/* =========================================================
+   安全な停止
+   ========================================================= */
 
+function safeStop(audio) {
 
-/* ---------------------------------------------------------
-   音声有効化状態
---------------------------------------------------------- */
-
-let audioEnabled = false;
-
-
-/* ---------------------------------------------------------
-   iPad / Safari 音声有効化
---------------------------------------------------------- */
-
-async function enableAudio() {
-
-    if (audioEnabled) {
-        return true;
-    }
+    if (!audio) return;
 
     try {
 
+        audio.pause();
+
         /*
-         * ユーザー操作中に全Audio要素を一度再生→停止する。
-         *
-         * iOSではAudio要素ごとに最初のplay()を
-         * ユーザー操作から行っておくことが重要。
+         * currentTimeを戻す
          */
-
-        for (const audio of audioList) {
-
-            audio.currentTime = 0;
-
-            try {
-
-                await audio.play();
-
-                audio.pause();
-                audio.currentTime = 0;
-
-            } catch (error) {
-
-                console.warn(
-                    "音声初期化失敗:",
-                    audio.src,
-                    error
-                );
-
-            }
-        }
-
-
-        audioEnabled = true;
-
-
-        const button =
-            document.getElementById("enableAudioButton");
-
-        const status =
-            document.getElementById("audioStatus");
-
-
-        if (button) {
-
-            button.textContent = "🔊 音声有効";
-
-            button.style.background = "#267a35";
-
-        }
-
-
-        if (status) {
-
-            status.textContent =
-                "音声は有効です。接近放送などが自動再生されます。";
-
-            status.style.color = "#267a35";
-
-        }
-
-
-        console.log("音声システム有効化完了");
-
-        return true;
-
+        audio.currentTime = 0;
 
     } catch (error) {
 
-        console.error(
-            "音声有効化エラー:",
+        console.warn(
+            "[音声停止エラー]",
             error
         );
 
-        return false;
     }
 }
 
 
-/* ---------------------------------------------------------
-   音声有効化ボタン
---------------------------------------------------------- */
-
-const enableAudioButton =
-    document.getElementById("enableAudioButton");
-
-
-if (enableAudioButton) {
-
-    enableAudioButton.addEventListener(
-        "click",
-        async () => {
-
-            await enableAudio();
-
-        },
-        {
-            passive: true
-        }
-    );
-
-}
-
-
-/* ---------------------------------------------------------
-   接近状態
---------------------------------------------------------- */
-
-
-/* ---------------------------------------------------------
+/* =========================================================
    安全な再生
---------------------------------------------------------- */
+   ========================================================= */
 
 async function safePlay(audio, name) {
 
@@ -2383,6 +2376,16 @@ async function safePlay(audio, name) {
         );
 
         updateAudioDebug();
+
+        return false;
+    }
+
+
+    if (!audio) {
+
+        console.error(
+            `${name}: Audioオブジェクトがありません`
+        );
 
         return false;
     }
@@ -2423,133 +2426,294 @@ async function safePlay(audio, name) {
 }
 
 
-function setActiveButton(id) {
+/* =========================================================
+   音声有効化
+   ========================================================= */
 
-  document
-    .querySelectorAll(
-      "#btnAuto, #btnWeekday, #btnHoliday"
-    )
-    .forEach(button => {
+async function enableAudio() {
 
-      button.style.background = "";
-      button.style.color = "";
+    if (audioEnabled) {
 
-    });
+        updateAudioDebug();
 
-
-  const button =
-    document.getElementById(id);
+        return true;
+    }
 
 
-  if (!button) return;
+    console.log(
+        "[音声] ユーザー操作による音声有効化開始"
+    );
 
 
-  button.style.background = "#267a35";
-  button.style.color = "#fff";
-
-}
+    let successCount = 0;
 
 
-/* ---------------------------------------------------------
-   安全な停止
---------------------------------------------------------- */
+    /*
+     * ユーザー操作中に全音声を一度再生する。
+     *
+     * iPad Safariでは、最初のplay()をユーザー操作から
+     * 行っておくことが重要。
+     */
 
-function safeStop(audio) {
+    for (const audio of audioList) {
 
-    try {
+        try {
 
-        audio.pause();
-        audio.currentTime = 0;
+            audio.currentTime = 0;
 
-    } catch (error) {
+            await audio.play();
 
-        console.warn(
-            "音声停止エラー:",
-            error
+            audio.pause();
+
+            audio.currentTime = 0;
+
+            successCount++;
+
+        } catch (error) {
+
+            console.warn(
+                "[音声初期化失敗]",
+                audio.src,
+                error
+            );
+
+        }
+    }
+
+
+    /*
+     * 少なくとも1つの音声が再生できれば有効化
+     */
+    if (successCount > 0) {
+
+        audioEnabled = true;
+
+    } else {
+
+        audioEnabled = false;
+
+    }
+
+
+    const button =
+        document.getElementById(
+            "enableAudioButton"
         );
 
+
+    const status =
+        document.getElementById(
+            "audioStatus"
+        );
+
+
+    if (audioEnabled) {
+
+        if (button) {
+
+            button.textContent =
+                "🔊 音声有効";
+
+            button.style.background =
+                "#267a35";
+
+        }
+
+
+        if (status) {
+
+            status.textContent =
+                "音声は有効です。接近放送などが自動再生されます。";
+
+            status.style.color =
+                "#267a35";
+
+        }
+
+        console.log(
+            "[音声] 有効化成功",
+            successCount + "/" + audioList.length
+        );
+
+    } else {
+
+        if (button) {
+
+            button.textContent =
+                "🔊 音声を有効にする";
+
+            button.style.background =
+                "#222";
+
+        }
+
+
+        if (status) {
+
+            status.textContent =
+                "音声を有効化できませんでした。もう一度タップしてください。";
+
+            status.style.color =
+                "#cc0000";
+
+        }
+
     }
+
+
+    updateAudioDebug();
+
+    return audioEnabled;
 }
 
 
 /* =========================================================
-   接近放送
+   音声有効化ボタン
    ========================================================= */
+
+const enableAudioButton =
+    document.getElementById(
+        "enableAudioButton"
+    );
+
+
+if (enableAudioButton) {
+
+    enableAudioButton.addEventListener(
+        "click",
+        async () => {
+
+            await enableAudio();
+
+        }
+    );
+
+}
+
 
 /* =========================================================
-   接近放送システム
+   ジングル再生
    ========================================================= */
 
-let wasUpApproaching = false;
-let wasDownApproaching = false;
-
-let upJinglePlaying = false;
-let downJinglePlaying = false;
-
-
-/* ---------------------------------------------------------
-   ジングル再生
---------------------------------------------------------- */
-
-async function playJingle(audio, name, type) {
+async function playJingle(
+    audio,
+    name,
+    type
+) {
 
     if (!audioEnabled) {
-        console.log(`${name}: 音声が無効です`);
-        return;
+
+        console.warn(
+            `${name}: 音声無効`
+        );
+
+        return false;
     }
 
+
     /*
-     * すでに再生中なら二重再生しない
+     * 二重再生防止
      */
-    if (type === "up" && upJinglePlaying) {
-        return;
+
+    if (
+        type === "up" &&
+        upJinglePlaying
+    ) {
+
+        console.log(
+            `${name}: すでに再生中`
+        );
+
+        return false;
     }
 
-    if (type === "down" && downJinglePlaying) {
-        return;
+
+    if (
+        type === "down" &&
+        downJinglePlaying
+    ) {
+
+        console.log(
+            `${name}: すでに再生中`
+        );
+
+        return false;
     }
 
 
     /*
-     * 再生状態を先に設定
+     * 再生中フラグを先にON
      */
     if (type === "up") {
+
         upJinglePlaying = true;
+
     } else {
+
         downJinglePlaying = true;
+
     }
 
 
     /*
-     * 終了イベントを再生前に登録
+     * 古いイベントを削除
+     */
+    audio.onended = null;
+
+
+    /*
+     * 再生終了イベント
      */
     audio.onended = () => {
 
+        console.log(
+            `[ジングル終了] ${name}`
+        );
+
+
         if (type === "up") {
+
             upJinglePlaying = false;
+
         } else {
+
             downJinglePlaying = false;
+
         }
 
-        console.log(`${name}: 再生終了`);
 
         updateAudioDebug();
+
     };
 
 
     try {
 
         /*
-         * 念のため最初から
+         * 最初から再生
          */
         audio.pause();
+
         audio.currentTime = 0;
 
-        console.log(`[ジングル再生開始] ${name}`);
+
+        console.log(
+            `[ジングル再生開始] ${name}`
+        );
+
 
         await audio.play();
 
-        console.log(`[ジングル再生成功] ${name}`);
+
+        console.log(
+            `[ジングル再生成功] ${name}`
+        );
+
+
+        updateAudioDebug();
+
+        return true;
+
 
     } catch (error) {
 
@@ -2558,45 +2722,62 @@ async function playJingle(audio, name, type) {
             error
         );
 
+
         /*
-         * 再生失敗時は状態を戻す
+         * 再生失敗時
          */
         if (type === "up") {
+
             upJinglePlaying = false;
+
         } else {
+
             downJinglePlaying = false;
+
         }
 
-    }
 
-    updateAudioDebug();
+        updateAudioDebug();
+
+        return false;
+    }
 }
 
 
-/* ---------------------------------------------------------
+/* =========================================================
    上り接近放送
---------------------------------------------------------- */
+   ========================================================= */
 
-async function handleUpApproach(upApproaching) {
+async function handleUpApproach(
+    upApproaching
+) {
 
     console.log(
         `[上り接近判定] ${wasUpApproaching} → ${upApproaching}`
     );
 
 
-    /* ================================
+    /* =========================================
        接近開始
-    ================================= */
+       ========================================= */
 
-    if (upApproaching && !wasUpApproaching) {
+    if (
+        upApproaching &&
+        !wasUpApproaching
+    ) {
 
-        console.log("上り：列車がまいります 開始");
+        console.log(
+            "上り：列車がまいります 開始"
+        );
+
 
         /*
          * ジングル停止
          */
         safeStop(upJingle);
+
         upJinglePlaying = false;
+
 
         /*
          * 接近放送開始
@@ -2609,13 +2790,15 @@ async function handleUpApproach(upApproaching) {
                 upSound,
                 "up.mp3"
             );
+
         }
+
     }
 
 
-    /* ================================
+    /* =========================================
        接近中
-    ================================= */
+       ========================================= */
 
     if (upApproaching) {
 
@@ -2628,22 +2811,31 @@ async function handleUpApproach(upApproaching) {
                 upSound,
                 "up.mp3"
             );
+
         }
+
     }
 
 
-    /* ================================
+    /* =========================================
        接近終了
-    ================================= */
+       ========================================= */
 
-    if (!upApproaching && wasUpApproaching) {
+    if (
+        !upApproaching &&
+        wasUpApproaching
+    ) {
 
-        console.log("上り：列車がまいります 終了");
+        console.log(
+            "上り：列車がまいります 終了"
+        );
+
 
         /*
          * 接近放送停止
          */
         safeStop(upSound);
+
 
         /*
          * ジングル
@@ -2653,37 +2845,52 @@ async function handleUpApproach(upApproaching) {
             "uj.mp3",
             "up"
         );
+
     }
 
 
-    wasUpApproaching = upApproaching;
+    /*
+     * 状態保存
+     */
+    wasUpApproaching =
+        upApproaching;
 }
 
 
-/* ---------------------------------------------------------
+/* =========================================================
    下り接近放送
---------------------------------------------------------- */
+   ========================================================= */
 
-async function handleDownApproach(downApproaching) {
+async function handleDownApproach(
+    downApproaching
+) {
 
     console.log(
         `[下り接近判定] ${wasDownApproaching} → ${downApproaching}`
     );
 
 
-    /* ================================
+    /* =========================================
        接近開始
-    ================================= */
+       ========================================= */
 
-    if (downApproaching && !wasDownApproaching) {
+    if (
+        downApproaching &&
+        !wasDownApproaching
+    ) {
 
-        console.log("下り：列車がまいります 開始");
+        console.log(
+            "下り：列車がまいります 開始"
+        );
+
 
         /*
          * ジングル停止
          */
         safeStop(downJingle);
+
         downJinglePlaying = false;
+
 
         /*
          * 接近放送開始
@@ -2696,13 +2903,15 @@ async function handleDownApproach(downApproaching) {
                 downSound,
                 "dw.mp3"
             );
+
         }
+
     }
 
 
-    /* ================================
+    /* =========================================
        接近中
-    ================================= */
+       ========================================= */
 
     if (downApproaching) {
 
@@ -2715,77 +2924,175 @@ async function handleDownApproach(downApproaching) {
                 downSound,
                 "dw.mp3"
             );
+
         }
+
     }
 
 
-    /* ================================
+    /* =========================================
        接近終了
-    ================================= */
+       ========================================= */
 
-    if (!downApproaching && wasDownApproaching) {
+    if (
+        !downApproaching &&
+        wasDownApproaching
+    ) {
 
-        console.log("下り：列車がまいります 終了");
+        console.log(
+            "下り：列車がまいります 終了"
+        );
+
 
         /*
          * 接近放送停止
          */
         safeStop(downSound);
 
+
         /*
-         * 下りジングル再生
+         * 下りジングル
          */
         await playJingle(
             downJingle,
             "dj.mp3",
             "down"
         );
+
     }
 
 
-    wasDownApproaching = downApproaching;
+    /*
+     * 状態保存
+     */
+    wasDownApproaching =
+        downApproaching;
 }
 
 
 /* =========================================================
-   メイン
+   接近状態を時刻から判定
    ========================================================= */
 
-async function updateApproachSound() {
+function checkApproachState() {
+
+    /*
+     * 画面DOMではなく、
+     * 実際の時刻表データから判定する。
+     *
+     * これによりupdateBoard()との競合を防ぐ。
+     */
+
+
+    const upTrains =
+        getNextTrains(trainsUp);
+
+
+    const downTrains =
+        getNextTrains(trainsDown);
+
+
+    const firstUp =
+        upTrains[0];
+
+
+    const firstDown =
+        downTrains[0];
+
 
     const upApproaching =
-        document.querySelector(
-            '.block[data-direction="up"] .row.arrival.blink'
-        ) !== null;
+        firstUp
+            ? isArrivingSoon(firstUp)
+            : false;
 
 
     const downApproaching =
-        document.querySelector(
-            '.block[data-direction="down"] .row.arrival.blink'
-        ) !== null;
+        firstDown
+            ? isArrivingSoon(firstDown)
+            : false;
 
 
-    /*
-     * 上り・下りを並列ではなく順番に処理
-     * 状態競合を防止
-     */
-
-    await handleUpApproach(upApproaching);
-
-    await handleDownApproach(downApproaching);
-
-    updateAudioDebug();
+    return {
+        upApproaching,
+        downApproaching
+    };
 }
 
 
-
 /* =========================================================
-   音声デバッグ表示を定期更新
+   音声メイン処理
    ========================================================= */
 
-<!--setInterval(updateAudioDebug, 500);-->
+let audioCheckRunning = false;
 
 
+async function updateApproachSound() {
+
+    /*
+     * 前回の処理がまだ終わっていたら
+     * 二重実行しない。
+     */
+
+    if (audioCheckRunning) {
+
+        return;
+
+    }
+
+
+    audioCheckRunning = true;
+
+
+    try {
+
+        const state =
+            checkApproachState();
+
+
+        await handleUpApproach(
+            state.upApproaching
+        );
+
+
+        await handleDownApproach(
+            state.downApproaching
+        );
+
+
+        updateAudioDebug();
+
+    } catch (error) {
+
+        console.error(
+            "[音声メイン処理エラー]",
+            error
+        );
+
+    }
+
+
+    audioCheckRunning = false;
+}
+
+
+/* =========================================================
+   音声監視
+   ========================================================= */
+
+setInterval(
+    updateApproachSound,
+    500
+);
+
+
+/* =========================================================
+   デバッグ更新
+   ========================================================= */
+
+setInterval(
+    updateAudioDebug,
+    500
+);
 
 
 /* =========================================================
@@ -2794,169 +3101,178 @@ async function updateApproachSound() {
 
 (() => {
 
-
     const switches =
-        document.querySelectorAll(".switch");
-
-
-    switches.forEach((switchElement) => {
-
-
-        const onButton =
-            switchElement.querySelector(".on-button");
-
-
-        const offButton =
-            switchElement.querySelector(".off-button");
-
-
-        const status =
-            switchElement.querySelector(".status");
-
-
-        /* =================================================
-           ON
-        ================================================= */
-
-        onButton.addEventListener(
-            "click",
-            async () => {
-
-
-                /*
-                 * まずユーザー操作を利用して
-                 * 音声を有効化
-                 */
-
-                if (!audioEnabled) {
-
-                    await enableAudio();
-
-                }
-
-
-                /*
-                 * すでにONなら何もしない
-                 */
-
-                if (
-                    onButton.classList.contains("pressed")
-                ) {
-
-                    return;
-
-                }
-
-
-                /*
-                 * ONボタン押下
-                 */
-
-                onButton.classList.add(
-                    "pressed"
-                );
-
-
-                switchElement.classList.add(
-                    "is-on"
-                );
-
-
-                status.textContent = "ON";
-
-
-                /*
-                 * OFF音停止
-                 */
-
-                safeStop(cls);
-
-
-                /*
-                 * ON音を最初から再生
-                 */
-
-                safeStop(mel);
-
-                await safePlay(
-                    mel,
-                    "mel.mp3"
-                );
-
-            }
+        document.querySelectorAll(
+            ".switch"
         );
 
 
-        /* =================================================
-           OFF
-        ================================================= */
+    switches.forEach(
+        switchElement => {
 
-        offButton.addEventListener(
-            "click",
-            async () => {
+            const onButton =
+                switchElement.querySelector(
+                    ".on-button"
+                );
 
 
-                /*
-                 * ONだったか
-                 */
+            const offButton =
+                switchElement.querySelector(
+                    ".off-button"
+                );
 
-                const wasOn =
-                    onButton.classList.contains(
+
+            const status =
+                switchElement.querySelector(
+                    ".status"
+                );
+
+
+            /* =========================================
+               ON
+               ========================================= */
+
+            onButton.addEventListener(
+                "click",
+                async () => {
+
+                    /*
+                     * ユーザー操作を利用して
+                     * 音声を有効化
+                     */
+
+                    if (!audioEnabled) {
+
+                        await enableAudio();
+
+                    }
+
+
+                    /*
+                     * すでにONなら終了
+                     */
+
+                    if (
+                        onButton.classList.contains(
+                            "pressed"
+                        )
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    /*
+                     * ON状態
+                     */
+
+                    onButton.classList.add(
                         "pressed"
                     );
 
 
-                /*
-                 * ON音停止
-                 */
-
-                if (wasOn) {
-
-                    safeStop(mel);
-
-                }
+                    switchElement.classList.add(
+                        "is-on"
+                    );
 
 
-                /*
-                 * ON状態解除
-                 */
-
-                onButton.classList.remove(
-                    "pressed"
-                );
+                    status.textContent =
+                        "ON";
 
 
-                switchElement.classList.remove(
-                    "is-on"
-                );
-
-
-                status.textContent = "OFF";
-
-
-                /*
-                 * ON → OFFの場合のみ
-                 * OFF音を再生
-                 */
-
-                if (wasOn) {
+                    /*
+                     * OFF音停止
+                     */
 
                     safeStop(cls);
 
+
+                    /*
+                     * ON音再生
+                     */
+
+                    safeStop(mel);
+
+
                     await safePlay(
-                        cls,
-                        "cls.mp3"
+                        mel,
+                        "mel.mp3"
                     );
 
                 }
+            );
 
-            }
-        );
 
-    });
+            /* =========================================
+               OFF
+               ========================================= */
+
+            offButton.addEventListener(
+                "click",
+                async () => {
+
+                    const wasOn =
+                        onButton.classList.contains(
+                            "pressed"
+                        );
+
+
+                    /*
+                     * ON音停止
+                     */
+
+                    if (wasOn) {
+
+                        safeStop(mel);
+
+                    }
+
+
+                    /*
+                     * OFF状態
+                     */
+
+                    onButton.classList.remove(
+                        "pressed"
+                    );
+
+
+                    switchElement.classList.remove(
+                        "is-on"
+                    );
+
+
+                    status.textContent =
+                        "OFF";
+
+
+                    /*
+                     * ON → OFFのときだけ
+                     * OFF音を再生
+                     */
+
+                    if (wasOn) {
+
+                        safeStop(cls);
+
+
+                        await safePlay(
+                            cls,
+                            "cls.mp3"
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+    );
 
 })();
 </script>
+
 
 
 
