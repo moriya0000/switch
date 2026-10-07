@@ -683,8 +683,8 @@ function updateBoard() {
 
     const up = {
 
-        noLeft: "2",
-        noRight: "1",
+        noLeft: "",
+        noRight: "",
 
         title:
             "上り　取手方面",
@@ -699,8 +699,8 @@ function updateBoard() {
 
     const down = {
 
-        noLeft: "4",
-        noRight: "3",
+        noLeft: "",
+        noRight: "",
 
         title:
             "下り　守谷・水海道・下館方面",
