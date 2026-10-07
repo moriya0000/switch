@@ -1223,6 +1223,22 @@ button {
         iPadでは最初に1回タップしてください
     </div>
 </div>
+  
+<div id="audioDebug" style="
+    margin: 10px auto 20px;
+    width: min(700px, calc(100vw - 30px));
+    padding: 12px;
+    background: #111;
+    color: #00ff66;
+    font-family: monospace;
+    font-size: 14px;
+    text-align: left;
+    border-radius: 6px;
+    box-sizing: border-box;
+    white-space: pre-wrap;
+">
+音声デバッグ情報
+</div>
 
 <!-- ================================
      スイッチ操作
@@ -2074,6 +2090,106 @@ const downJingle = new Audio("dj.mp3");
 const mel = new Audio("mel.mp3");
 const cls = new Audio("cls.mp3");
 
+/* =========================================================
+   音声デバッグ表示
+   ========================================================= */
+
+function updateAudioDebug() {
+
+    const debug = document.getElementById("audioDebug");
+
+    if (!debug) return;
+
+
+    function getState(audio) {
+
+        if (audio.paused) {
+
+            if (audio.ended) {
+                return "終了";
+            }
+
+            return "停止中";
+        }
+
+        return "再生中";
+    }
+
+
+    function getTime(audio) {
+
+        if (!Number.isFinite(audio.currentTime)) {
+            return "0.00";
+        }
+
+        return audio.currentTime.toFixed(2);
+    }
+
+
+    debug.textContent =
+`音声有効: ${audioEnabled ? "YES" : "NO"}
+
+up.mp3   : ${getState(upSound)}  currentTime=${getTime(upSound)}
+dw.mp3   : ${getState(downSound)}  currentTime=${getTime(downSound)}
+uj.mp3   : ${getState(upJingle)}  currentTime=${getTime(upJingle)}
+dj.mp3   : ${getState(downJingle)}  currentTime=${getTime(downJingle)}
+mel.mp3  : ${getState(mel)}  currentTime=${getTime(mel)}
+cls.mp3  : ${getState(cls)}  currentTime=${getTime(cls)}
+
+上り接近: ${wasUpApproaching ? "YES" : "NO"}
+下り接近: ${wasDownApproaching ? "YES" : "NO"}
+
+上りジングル再生中: ${upJinglePlaying ? "YES" : "NO"}
+下りジングル再生中: ${downJinglePlaying ? "YES" : "NO"}`;
+}
+setInterval(updateAudioDebug, 500);
+audioList.forEach(audio => {
+
+    audio.addEventListener("play", () => {
+
+        console.log(
+            `[PLAY] ${audio.src}`
+        );
+
+        updateAudioDebug();
+
+    });
+
+
+    audio.addEventListener("pause", () => {
+
+        console.log(
+            `[PAUSE] ${audio.src}`
+        );
+
+        updateAudioDebug();
+
+    });
+
+
+    audio.addEventListener("ended", () => {
+
+        console.log(
+            `[ENDED] ${audio.src}`
+        );
+
+        updateAudioDebug();
+
+    });
+
+
+    audio.addEventListener("error", () => {
+
+        console.error(
+            `[AUDIO ERROR] ${audio.src}`,
+            audio.error
+        );
+
+        updateAudioDebug();
+
+    });
+
+});
 
 /* ---------------------------------------------------------
    基本設定
@@ -2241,21 +2357,51 @@ let wasDownApproaching = false;
 async function safePlay(audio, name) {
 
     if (!audioEnabled) {
-        console.warn(`${name}: 音声が有効化されていません`);
+
+        console.warn(
+            `${name}: 音声が有効化されていません`
+        );
+
+        updateAudioDebug();
+
         return false;
     }
 
+
     try {
+
+        console.log(
+            `[音声再生開始] ${name}`
+        );
+
+
         await audio.play();
+
+
+        console.log(
+            `[音声再生成功] ${name}`
+        );
+
+
+        updateAudioDebug();
+
         return true;
+
 
     } catch (error) {
 
-        console.error(`${name} 再生エラー:`, error);
+        console.error(
+            `[音声再生失敗] ${name}`,
+            error
+        );
+
+
+        updateAudioDebug();
 
         return false;
     }
 }
+
 
 
 
@@ -2301,11 +2447,14 @@ let downJinglePlaying = false;
 --------------------------------------------------------- */
 
 async function handleUpApproach(upApproaching) {
-
+console.log(
+        `[上り接近判定] ${wasUpApproaching} → ${upApproaching}`
+    );
     /* ================================
        接近開始
     ================================= */
 
+  
     if (upApproaching && !wasUpApproaching) {
 
         console.log("上り：列車がまいります 開始");
@@ -2400,6 +2549,7 @@ async function handleUpApproach(upApproaching) {
     }
 
 
+  
     wasUpApproaching = upApproaching;
 }
 
@@ -2409,7 +2559,9 @@ async function handleUpApproach(upApproaching) {
 --------------------------------------------------------- */
 
 async function handleDownApproach(downApproaching) {
-
+console.log(
+        `[上り接近判定] ${wasUpApproaching} → ${upApproaching}`
+    );
     /* ================================
        接近開始
     ================================= */
