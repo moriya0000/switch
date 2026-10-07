@@ -9,22 +9,22 @@
 ========================================================= */
 
 const upSound =
-    new Audio("./up.mp3");
+    new Audio("./mp3/up.mp3");
 
 const downSound =
-    new Audio("./dw.mp3");
+    new Audio("./mp3/dw.mp3");
 
 const upJingle =
-    new Audio("./uj.mp3");
+    new Audio("./mp3/uj.mp3");
 
 const downJingle =
-    new Audio("./dj.mp3");
+    new Audio("./mp3/dj.mp3");
 
 const mel =
-    new Audio("./mel.mp3");
+    new Audio("./mp3/mel.mp3");
 
 const cls =
-    new Audio("./cls.mp3");
+    new Audio("./mp3/cls.mp3");
 
 
 const audioList = [
