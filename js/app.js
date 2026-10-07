@@ -179,22 +179,22 @@ function loadTimetableByDayType() {
     currentDayType =
         dayType;
 
-    if (dayType === "holiday") {
+if (dayType === "holiday") {
 
-        trainsUp =
-            parseCsv(csvUpHoliday);
+    trainsUp =
+        parseCsv(window.csvUpHoliday);
 
-        trainsDown =
-            parseCsv(csvDownHoliday);
+    trainsDown =
+        parseCsv(window.csvDownHoliday);
 
-    } else {
+} else {
 
-        trainsUp =
-            parseCsv(csvUpWeekday);
+    trainsUp =
+        parseCsv(window.csvUpWeekday);
 
-        trainsDown =
-            parseCsv(csvDownWeekday);
-    }
+    trainsDown =
+        parseCsv(window.csvDownWeekday);
+}
 
     updateBoard();
     updateTimetableStatus();
