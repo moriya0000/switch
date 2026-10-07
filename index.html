@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>関鉄発車標 ver1.7</title>
+<title>関鉄発車標 ver1.8</title>
 <link rel="shortcut icon" href="https://www.kantetsu.co.jp/cms/wp-content/themes/kr/img/favicon/favicon.ico">
 <style>
 body {
@@ -1927,28 +1927,35 @@ function updateBoard(){
   };
 
   /*
-   * 案内スクロール中はDOMを再生成しない。
+   * 現在「列車がまいります」が表示されている場合は、
+   * 時刻判定を優先して通常どおり再描画する。
+   */
+  const approaching =
+    board.querySelector(".row.arrival.blink");
+
+  /*
+   * 案内スクロール中の場合だけ、
+   * DOMを作り直さない。
    *
-   * updateTime() が1秒ごとに呼ばれるため、
-   * board.innerHTMLを書き換えるとCSS animationが
-   * 毎秒0%に戻ってしまう。
+   * これによりCSSアニメーションが
+   * 1秒ごとに先頭へ戻るのを防ぐ。
    */
   const scrolling =
     board.querySelector(".row.arrival.scroll");
 
-  if (scrolling) {
-
-    /*
-     * 現在表示中の案内がまだ有効なら、
-     * スクロールDOMをそのまま維持する。
-     */
+  if (scrolling && !approaching) {
     return;
   }
 
+  /*
+   * 通常表示・接近表示・スクロール終了時は
+   * 今までどおり再描画する。
+   */
   board.innerHTML = window.innerWidth >= 1250
     ? `<div>${renderBlock(down)}</div><div>${renderBlock(up)}</div>`
     : `<div>${renderBlock(up)}</div><div>${renderBlock(down)}</div>`;
 }
+
 
 
 /* ===== 現在時刻 & 次列車更新 ===== */
