@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>関鉄発車標 ver1.3</title>
+<title>関鉄発車標 ver1.4</title>
 <link rel="shortcut icon" href="https://www.kantetsu.co.jp/cms/wp-content/themes/kr/img/favicon/favicon.ico">
 <style>
 body {
@@ -1934,10 +1934,21 @@ if (typeof updateApproachSound === "function") {
 /* ===== 現在時刻 & 次列車更新 ===== */
 function updateTime(){
   const d = new Date();
-  document.getElementById("now").textContent =
-    d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0');
+
+  const nowElement = document.getElementById("now");
+
+  if (nowElement) {
+    nowElement.textContent =
+      d.getHours().toString().padStart(2,'0') +
+      ":" +
+      d.getMinutes().toString().padStart(2,'0');
+  } else {
+    console.warn("デバッグ: #now が見つかりません");
+  }
+
   updateNextTrains();
 }
+
 
 
 /* ===== 遅延設定 ===== */
@@ -2593,9 +2604,11 @@ console.log(
 --------------------------------------------------------- */
 
 async function handleDownApproach(downApproaching) {
-console.log(
-        `[上り接近判定] ${wasUpApproaching} → ${upApproaching}`
+
+    console.log(
+        `[下り接近判定] ${wasDownApproaching} → ${downApproaching}`
     );
+
     /* ================================
        接近開始
     ================================= */
@@ -2607,16 +2620,10 @@ console.log(
 
         console.log("下り：列車がまいります 開始");
 
-        /*
-         * ジングル停止
-         */
         safeStop(downJingle);
 
         downJinglePlaying = false;
 
-        /*
-         * 接近放送開始
-         */
         if (audioEnabled) {
 
             safeStop(downSound);
@@ -2659,14 +2666,8 @@ console.log(
 
         console.log("下り：列車がまいります 終了");
 
-        /*
-         * 接近放送停止
-         */
         safeStop(downSound);
 
-        /*
-         * ジングル再生
-         */
         if (
             audioEnabled &&
             !downJinglePlaying
@@ -2696,6 +2697,7 @@ console.log(
 
     wasDownApproaching = downApproaching;
 }
+
 
 
 /* =========================================================
