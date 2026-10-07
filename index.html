@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>関鉄発車標 ver1.8</title>
+<title>関鉄発車標 ver1.9</title>
 <link rel="shortcut icon" href="https://www.kantetsu.co.jp/cms/wp-content/themes/kr/img/favicon/favicon.ico">
 <style>
 body {
@@ -1816,24 +1816,54 @@ let currentGuideMessageDown = "";
 let manualDayType = null; // "weekday" | "holiday" | null
 
 // 案内スクロールを2分ごとに1回だけ表示
+let guideTimer = null;
+
 function showGuideOnce(){
+
   const upTrains = getNextTrains(trainsUp);
   const downTrains = getNextTrains(trainsDown);
 
   const firstTrainUp = upTrains[0];
   const firstTrainDown = downTrains[0];
 
-  currentGuideMessageUp = generateGuideMessageUp(firstTrainUp);
-  currentGuideMessageDown = generateGuideMessageDown(firstTrainDown);
+  currentGuideMessageUp =
+    generateGuideMessageUp(firstTrainUp);
+
+  currentGuideMessageDown =
+    generateGuideMessageDown(firstTrainDown);
 
   showGuideSecondRow = true;
+
+  /*
+   * 案内表示を開始
+   */
   updateBoard();
 
-  setTimeout(()=>{
+  /*
+   * 前回のタイマーが残っていたら解除
+   */
+  if (guideTimer !== null) {
+    clearTimeout(guideTimer);
+  }
+
+  /*
+   * 15秒後に必ず通常表示へ戻す
+   */
+  guideTimer = setTimeout(() => {
+
     showGuideSecondRow = false;
+
+    /*
+     * スクロール表示を強制的に終了して
+     * 通常の2列車表示を再構築する
+     */
     updateBoard();
-  },15000);
+
+    guideTimer = null;
+
+  }, 15000);
 }
+
 
 setInterval(showGuideOnce, 30000);
 
@@ -1914,51 +1944,60 @@ function updateBoard(){
 
   const board = document.getElementById("board");
 
+  if (!board) return;
+
   const up = {
-    noLeft: "",
-    noRight: "",
+    noLeft: "2",
+    noRight: "1",
     title: "上り　取手方面",
     direction: "up",
     trains: getNextTrains(trainsUp)
   };
 
   const down = {
-    noLeft: "",
-    noRight: "",
+    noLeft: "4",
+    noRight: "3",
     title: "下り　守谷・水海道・下館方面",
     direction: "down",
     trains: getNextTrains(trainsDown)
   };
 
   /*
-   * 現在「列車がまいります」が表示されている場合は、
-   * 時刻判定を優先して通常どおり再描画する。
+   * 現在表示されている案内スクロール。
+   */
+  const scrolling =
+    board.querySelector(".row.arrival.scroll");
+
+  /*
+   * 「列車がまいります」は常に最新状態を
+   * 優先して再描画する。
    */
   const approaching =
     board.querySelector(".row.arrival.blink");
 
   /*
-   * 案内スクロール中の場合だけ、
-   * DOMを作り直さない。
+   * 案内スクロール中は、通常の1秒更新では
+   * DOMを書き換えない。
    *
-   * これによりCSSアニメーションが
-   * 1秒ごとに先頭へ戻るのを防ぐ。
+   * ただし showGuideSecondRow が false になった場合は
+   * スクロール終了なので必ず再描画する。
    */
-  const scrolling =
-    board.querySelector(".row.arrival.scroll");
-
-  if (scrolling && !approaching) {
+  if (
+    scrolling &&
+    showGuideSecondRow &&
+    !approaching
+  ) {
     return;
   }
 
   /*
-   * 通常表示・接近表示・スクロール終了時は
-   * 今までどおり再描画する。
+   * 通常表示へ戻す。
    */
   board.innerHTML = window.innerWidth >= 1250
     ? `<div>${renderBlock(down)}</div><div>${renderBlock(up)}</div>`
     : `<div>${renderBlock(up)}</div><div>${renderBlock(down)}</div>`;
 }
+
 
 
 
@@ -1984,14 +2023,40 @@ function updateTime(){
 
 /* ===== 遅延設定 ===== */
 document.getElementById("addDelay").addEventListener("click", ()=>{
-  const trainNo = document.getElementById("delayTrainNo").value.trim();
-  const minutes = parseInt(document.getElementById("delayMinutes").value, 10);
-  if(!trainNo || isNaN(minutes)) return alert("列車番号と遅延時間を正しく入力してください");
-  
+
+  const trainNo =
+    document.getElementById("delayTrainNo").value.trim();
+
+  const minutes =
+    parseInt(
+      document.getElementById("delayMinutes").value,
+      10
+    );
+
+  if (!trainNo || isNaN(minutes)) {
+    alert("列車番号と遅延時間を正しく入力してください");
+    return;
+  }
+
   delays[trainNo] = minutes;
-  alert(`${trainNo}号列車に${minutes}分の遅延を設定しました`);
-  updateBoard();
+
+  alert(
+    `${trainNo}列車に${minutes}分の遅延を設定しました`
+  );
+
+  /*
+   * 案内スクロール中なら、
+   * スクロールを途中でリセットしない。
+   */
+  const scrolling =
+    document.querySelector(".row.arrival.scroll");
+
+  if (!scrolling) {
+    updateBoard();
+  }
+
 });
+
 
 /* ===== 初期処理 ===== */
 let lang='ja';
