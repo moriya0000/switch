@@ -315,3 +315,9 @@ const csvDownHoliday = `
 3153,水海道, ,23:20,普通,4,2,
 3155,水海道, ,23:42,普通,3,2,
 3157,水海道, ,23:59,普通,3,2,
+
+console.log("timetable.js 読み込み成功");
+console.log("csvUpWeekday:", typeof csvUpWeekday);
+console.log("csvDownWeekday:", typeof csvDownWeekday);
+console.log("csvUpHoliday:", typeof csvUpHoliday);
+console.log("csvDownHoliday:", typeof csvDownHoliday);
