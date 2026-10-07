@@ -1,0 +1,981 @@
+/* =========================================================
+   関鉄発車標
+   共通スタイル
+========================================================= */
+
+
+/* =========================================================
+   1. Reset / Base
+========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100%;
+    margin: 0;
+    overflow-x: hidden;
+}
+
+body {
+    min-height: 100vh;
+
+    background: #fff;
+
+    font-family:
+        "JFドットjiskan24h",
+        "MS ゴシック",
+        sans-serif;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+button,
+input {
+    touch-action: manipulation;
+}
+
+button {
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+}
+
+button,
+input {
+    font-family: inherit;
+}
+
+
+/* =========================================================
+   2. 現在時刻
+========================================================= */
+
+.top {
+    width: min(1200px, calc(100vw - 32px));
+
+    display: grid;
+    grid-template-columns:
+        80px
+        580px
+        1fr
+        200px;
+
+    align-items: start;
+
+    padding: 18px 0 5px;
+    margin: 0 auto;
+
+    font-family: "MS ゴシック";
+}
+
+.top__label {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.top__time {
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: bold;
+}
+
+
+/* =========================================================
+   3. 操作エリア
+========================================================= */
+
+.control-area {
+    width: min(1200px, calc(100vw - 32px));
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+
+    margin: 0 auto 15px;
+}
+
+.control-row {
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 8px;
+}
+
+.control-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    white-space: nowrap;
+}
+
+.control-row input[type="text"],
+.control-row input[type="number"] {
+    min-height: 38px;
+
+    padding: 4px 8px;
+
+    font-size: 18px;
+}
+
+.control-row input[type="text"] {
+    width: 80px;
+}
+
+#delayMinutes {
+    width: 60px;
+}
+
+#timetableStatus {
+    margin-left: 10px;
+}
+
+
+/* =========================================================
+   4. 発車標
+========================================================= */
+
+.board {
+    width: 100%;
+    max-width: 1280px;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 625px);
+
+    justify-content: center;
+
+    gap: 10px;
+
+    padding: 0 10px;
+    margin: 0 auto;
+
+    overflow: hidden;
+}
+
+.board > div {
+    width: 100%;
+    max-width: 625px;
+    min-width: 0;
+
+    margin: 8px 0;
+}
+
+
+/* =========================================================
+   5. 発車標ブロック
+========================================================= */
+
+.block {
+    width: 100%;
+    min-width: 0;
+
+    margin: 0;
+    padding: 6px;
+
+    background: #666;
+
+    overflow: hidden;
+}
+
+.block-title {
+    width: 100%;
+
+    display: grid;
+    grid-template-columns:
+        60px
+        minmax(0, 1fr)
+        40px;
+
+    align-items: center;
+
+    margin-bottom: 4px;
+
+    color: #fff;
+
+    font-family:
+        "国鉄っぽいフォント（正体）",
+        "MS ゴシック",
+        sans-serif;
+
+    font-size: clamp(18px, 3vw, 26px);
+
+    white-space: nowrap;
+
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.block-title__text {
+    text-align: center;
+}
+
+.block-title .no {
+    width: 35px;
+
+    border: 3px solid #fff;
+
+    text-align: center;
+}
+
+
+/* =========================================================
+   6. 発車標ヘッダー
+========================================================= */
+
+.header {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+        22%
+        40%
+        38%;
+
+    align-items: center;
+
+    margin-bottom: 2px;
+
+    color: #fff;
+
+    font-family: "MS ゴシック";
+
+    font-size: clamp(13px, 2vw, 18px);
+
+    text-align: center;
+
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+
+/* =========================================================
+   7. 発車時刻表
+========================================================= */
+
+.table {
+    width: 100%;
+
+    padding: 4px 0;
+
+    background: #3a3a3a;
+
+    overflow: hidden;
+}
+
+.row {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+        22%
+        40%
+        38%;
+
+    align-items: center;
+
+    height: clamp(42px, 6vw, 50px);
+
+    margin-bottom: 2px;
+
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+
+/* =========================================================
+   8. 発車標文字
+========================================================= */
+
+.type,
+.dest,
+.time2 {
+    font-size: clamp(27px, 4vw, 46px);
+
+    white-space: nowrap;
+}
+
+.type {
+    color: #33cc33;
+    text-align: center;
+}
+
+.type.rapid {
+    color: #ff3333;
+}
+
+.dest {
+    color: #ffcc00;
+    text-align: center;
+}
+
+.time2 {
+    position: relative;
+
+    color: #33cc33;
+
+    text-align: center;
+}
+
+.cars,
+.track {
+    color: #ffcc00;
+    font-size: 46px;
+    text-align: center;
+}
+
+.cars .suffix {
+    position: relative;
+    top: -2px;
+
+    margin-left: 2px;
+
+    font-size: 24px;
+}
+
+
+/* =========================================================
+   9. 遅延表示
+========================================================= */
+
+.time2 .delay {
+    position: absolute;
+
+    left: 50%;
+    bottom: -20px;
+
+    transform: translateX(-50%);
+
+    color: red;
+
+    font-size: clamp(16px, 2.8vw, 23px);
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   10. 案内表示
+========================================================= */
+
+@keyframes blink {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes scrollText {
+    0% {
+        transform: translateX(0%);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
+.row.arrival {
+    grid-template-columns: 1fr;
+
+    height: clamp(42px, 6vw, 50px);
+}
+
+.row.arrival > div {
+    grid-column: 1 / -1;
+
+    width: 100%;
+
+    color: #ff3333;
+
+    font-size: clamp(26px, 5vw, 48px);
+
+    text-align: center;
+
+    overflow: hidden;
+
+    white-space: nowrap;
+}
+
+.row.arrival.blink > div {
+    animation: blink 1s steps(1) infinite;
+}
+
+.row.arrival.scroll {
+    position: relative;
+
+    overflow: hidden;
+}
+
+.row.arrival.scroll span {
+    display: inline-block;
+
+    padding-left: 100%;
+
+    white-space: nowrap;
+
+    animation:
+        scrollText 12s linear forwards;
+
+    will-change: transform;
+}
+
+
+/* =========================================================
+   11. 音声コントロール
+========================================================= */
+
+.audio-control {
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+
+    margin: 15px 0 25px;
+}
+
+.audio-control__button {
+    min-width: 260px;
+    min-height: 55px;
+
+    padding: 10px 20px;
+
+    border: none;
+    border-radius: 8px;
+
+    background: #222;
+    color: #fff;
+
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.audio-control__button.is-enabled {
+    background: #267a35;
+}
+
+.audio-control__status {
+    margin-top: 8px;
+
+    color: #777;
+
+    font-size: 14px;
+
+    text-align: center;
+}
+
+.audio-control__status.is-enabled {
+    color: #267a35;
+}
+
+.audio-control__status.is-error {
+    color: #cc0000;
+}
+
+
+/* =========================================================
+   12. 音声デバッグ
+========================================================= */
+
+.audio-debug {
+    width: min(700px, calc(100vw - 30px));
+
+    margin: 10px auto 20px;
+    padding: 12px;
+
+    background: #111;
+    color: #00ff66;
+
+    border-radius: 6px;
+
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.5;
+
+    text-align: left;
+
+    white-space: pre-wrap;
+}
+
+
+/* =========================================================
+   13. スイッチ操作
+========================================================= */
+
+.switch-page {
+    width: 100%;
+
+    padding: 50px 20px 80px;
+
+    color: #333;
+
+    font-family:
+        "Noto Sans JP",
+        "Yu Gothic",
+        "Hiragino Kaku Gothic ProN",
+        sans-serif;
+
+    text-align: center;
+}
+
+.switch-container {
+    display: flex;
+
+    justify-content: center;
+    align-items: flex-start;
+
+    gap: 55px;
+
+    flex-wrap: wrap;
+}
+
+.switch {
+    position: relative;
+
+    width: 365px;
+    height: 544px;
+}
+
+.switch-image {
+    display: block;
+
+    width: 365px;
+    height: 544px;
+
+    pointer-events: none;
+
+    user-select: none;
+
+    -webkit-user-drag: none;
+}
+
+
+/* =========================================================
+   14. ONボタン
+========================================================= */
+
+.on-button {
+    position: absolute;
+
+    left: 150px;
+    top: 225px;
+
+    width: 71px;
+    height: 71px;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 6px;
+
+    background: #050505;
+    color: #eee;
+
+    font-family: Arial, sans-serif;
+    font-size: 33px;
+    font-weight: 300;
+
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    box-shadow:
+        inset 0 1px 2px rgba(255,255,255,0.15),
+        inset 0 -3px 4px rgba(0,0,0,0.8),
+        0 1px 2px rgba(0,0,0,0.8);
+
+    transition:
+        transform 0.08s ease,
+        box-shadow 0.08s ease;
+
+    user-select: none;
+}
+
+.on-button.pressed {
+    transform:
+        translateY(2px)
+        scale(0.96);
+
+    box-shadow:
+        inset 0 4px 6px rgba(0,0,0,0.9),
+        inset 0 -1px 2px rgba(255,255,255,0.08),
+        0 0 1px rgba(0,0,0,0.8);
+}
+
+
+/* =========================================================
+   15. OFFボタン
+========================================================= */
+
+.off-button {
+    position: absolute;
+
+    left: 150px;
+    top: 323px;
+
+    width: 71px;
+    height: 71px;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 6px;
+
+    background: #d40000;
+    color: #fff;
+
+    font-family: Arial, sans-serif;
+    font-size: 31px;
+    font-weight: 300;
+
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    box-shadow:
+        inset 0 1px 2px rgba(255,255,255,0.15),
+        inset 0 -3px 4px rgba(100,0,0,0.8),
+        0 1px 2px rgba(0,0,0,0.8);
+
+    transition:
+        transform 0.08s ease,
+        box-shadow 0.08s ease;
+
+    user-select: none;
+}
+
+.off-button:active {
+    transform:
+        translateY(-2px)
+        scale(0.96);
+
+    box-shadow:
+        inset 0 4px 6px rgba(80,0,0,0.9),
+        inset 0 -1px 2px rgba(255,255,255,0.08);
+}
+
+
+/* =========================================================
+   16. スイッチ状態
+========================================================= */
+
+.status {
+    position: absolute;
+
+    left: 50%;
+    bottom: -42px;
+
+    transform: translateX(-50%);
+
+    min-width: 90px;
+
+    padding: 6px 16px;
+
+    border: 1px solid #ddd;
+    border-radius: 15px;
+
+    background: #eee;
+    color: #777;
+
+    font-size: 13px;
+
+    letter-spacing: 0.08em;
+
+    text-align: center;
+}
+
+.switch.is-on .status {
+    border-color: #c8e5cc;
+
+    background: #eef8ef;
+    color: #267a35;
+}
+
+
+/* =========================================================
+   17. タブレット
+========================================================= */
+
+@media screen and (min-width: 768px) and (max-width: 1366px) {
+
+    .top {
+        width: calc(100vw - 32px);
+    }
+
+    .board {
+        width: 100%;
+        max-width: 1280px;
+    }
+
+}
+
+
+/* =========================================================
+   18. iPad 横向き
+========================================================= */
+
+@media screen
+    and (min-width: 768px)
+    and (max-width: 1366px)
+    and (orientation: landscape) {
+
+    .board {
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(0, 1fr);
+    }
+
+    .type,
+    .dest,
+    .time2 {
+        font-size: clamp(27px, 3.8vw, 42px);
+    }
+
+    .block-title {
+        font-size: clamp(20px, 2.5vw, 26px);
+    }
+
+    .switch-container {
+        flex-direction: row;
+        flex-wrap: nowrap;
+
+        gap: 20px;
+    }
+
+    .switch {
+        transform:
+            scale(
+                min(
+                    0.85,
+                    calc((100vw - 80px) / 760)
+                )
+            );
+
+        transform-origin: top center;
+
+        margin-bottom: -80px;
+    }
+}
+
+
+/* =========================================================
+   19. iPad 縦向き
+========================================================= */
+
+@media screen
+    and (min-width: 768px)
+    and (max-width: 1366px)
+    and (orientation: portrait) {
+
+    .top {
+        grid-template-columns:
+            auto
+            minmax(180px, 1fr)
+            minmax(260px, 1fr);
+
+        gap: 10px;
+    }
+
+    .board {
+        width: min(96vw, 625px);
+
+        grid-template-columns:
+            minmax(0, 1fr);
+
+        padding: 0;
+    }
+
+    .type,
+    .dest,
+    .time2 {
+        font-size: clamp(30px, 6vw, 46px);
+    }
+
+    .switch-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+
+        gap: 30px;
+    }
+}
+
+
+/* =========================================================
+   20. スマートフォン
+========================================================= */
+
+@media screen and (max-width: 767px) {
+
+    .top {
+        width: calc(100vw - 20px);
+
+        display: flex;
+
+        justify-content: center;
+        align-items: center;
+
+        flex-wrap: wrap;
+
+        gap: 8px;
+
+        padding: 12px 0 5px;
+    }
+
+    .top__label {
+        font-size: 14px;
+    }
+
+    .top__time {
+        font-size: 36px;
+    }
+
+    .control-area {
+        width: calc(100vw - 20px);
+    }
+
+    .control-row {
+        justify-content: center;
+    }
+
+    .control-field {
+        font-size: 14px;
+    }
+
+    .board {
+        width: calc(100vw - 20px);
+
+        grid-template-columns:
+            minmax(0, 1fr);
+
+        padding: 0;
+
+        gap: 8px;
+    }
+
+    .board > div {
+        max-width: none;
+    }
+
+    .type,
+    .dest,
+    .time2 {
+        font-size: clamp(24px, 7vw, 40px);
+    }
+
+    .switch-container {
+        flex-direction: column;
+
+        align-items: center;
+
+        gap: 20px;
+    }
+
+    .switch {
+        transform: scale(0.72);
+
+        transform-origin: top center;
+
+        margin-bottom: -140px;
+    }
+}
+
+
+/* =========================================================
+   21. 極小画面
+========================================================= */
+
+@media screen and (max-width: 520px) {
+
+    .board {
+        width: calc(100vw - 10px);
+    }
+
+    .block-title {
+        grid-template-columns:
+            50px
+            minmax(0, 1fr)
+            35px;
+
+        font-size: 18px;
+    }
+
+    .block-title .no {
+        width: 30px;
+
+        border-width: 2px;
+    }
+
+    .header {
+        font-size: 12px;
+    }
+
+    .type,
+    .dest,
+    .time2 {
+        font-size: clamp(22px, 8vw, 34px);
+    }
+
+    .row {
+        height: 42px;
+    }
+
+    .row.arrival > div {
+        font-size: 26px;
+    }
+
+    .switch {
+        transform: scale(0.62);
+
+        margin-bottom: -175px;
+    }
+
+    .audio-control__button {
+        min-width: min(260px, calc(100vw - 30px));
+    }
+}
+
+
+/* =========================================================
+   22. タッチ端末
+========================================================= */
+
+@media (hover: none) and (pointer: coarse) {
+
+    button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .on-button,
+    .off-button {
+        touch-action: manipulation;
+    }
+}
