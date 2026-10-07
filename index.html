@@ -2711,22 +2711,22 @@ async function updateApproachSound() {
             '.block[data-direction="up"] .row.arrival.blink'
         ) !== null;
 
-
     const downApproaching =
         document.querySelector(
             '.block[data-direction="down"] .row.arrival.blink'
         ) !== null;
 
-
-    await handleUpApproach(
-        upApproaching
-    );
-
-
-    await handleDownApproach(
-        downApproaching
-    );
+    await handleUpApproach(upApproaching);
+    await handleDownApproach(downApproaching);
 }
+
+
+/* =========================================================
+   音声デバッグ表示を定期更新
+   ========================================================= */
+
+setInterval(updateAudioDebug, 500);
+
 
 
 
