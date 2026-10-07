@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>関鉄発車標 ver1.9</title>
+<title>関鉄発車標 ver2.0</title>
 <link rel="shortcut icon" href="https://www.kantetsu.co.jp/cms/wp-content/themes/kr/img/favicon/favicon.ico">
 <style>
 body {
@@ -1655,1721 +1655,1067 @@ const csvDownHoliday = `
 3157,水海道, ,23:59,普通,3,2,
 
 `;
+/* =========================================================
+   関鉄発車標
+   メインシステム
+   ========================================================= */
+
+
+/* =========================================================
+   1. 設定・マッピング
+   ========================================================= */
+
+const destMap = {
+  "取　手": "Toride",
+  "水海道": "Mitsukaido",
+  "下　館": "Shimodate",
+  "下　妻": "Shimotsuma",
+  "守　谷": "Moriya",
+  "新守谷": "ShinMoriya"
+};
+
+const typeMap = {
+  "普通": "Local",
+  "快速": "Rapid"
+};
+
+
+/* =========================================================
+   2. 祝日
+   ========================================================= */
 
-let trainsUp = [];
-let trainsDown = [];
-let currentDayType = "";
-
-function loadTimetableByDayType(){
-  const now = new Date();
-  const week = now.getDay(); // 0=日
-  const isWeekend = (week === 0 || week === 6);
-  const isHoliday = isJapaneseHoliday(now);
-
-  const dayType = (isWeekend || isHoliday) ? "holiday" : "weekday";
-
-  // 同じ種別なら再読み込みしない
-  if(currentDayType === dayType) return;
-
-  currentDayType = dayType;
-
-  if(dayType === "holiday"){
-    trainsUp = parseCsv(csvUpHoliday);
-    trainsDown = parseCsv(csvDownHoliday);
-    console.log("休日ダイヤ読み込み");
-  } else {
-    trainsUp = parseCsv(csvUpWeekday);
-    trainsDown = parseCsv(csvDownWeekday);
-    console.log("平日ダイヤ読み込み");
-  }
-
-  updateBoard();
-  updateNextTrains();
-}
-function updateNextTrains(){
-    updateBoard();
-}
-
-
-function parseCsv(csv){
-  return csv.trim().split('\n').map(line=>{
-    const c = line.split(',');
-    return {
-      no: c[0],
-      dest: c[1],
-      track: c[2],
-      time: c[3],
-      type: c[4],
-      trackno: c[5],
-      cars: c[6],
-      arrivalMin: Number(c[7] || 1)   // ←追加（未設定なら1分前）
-    };
-  });
-}
-setInterval(loadTimetableByDayType, 60 * 1000);
-
-
-/* ===== 案内文生成（既存そのまま） ===== */
-// 行先の空白を削除するユーティリティ
-function normalizeDest(dest) {
-  return dest.replace(/\s+/g, '');
-}
-
-// 上り列車用の案内文生成
-function generateGuideMessageUp(train) {
-  if (!train) return "";
-  const dest = normalizeDest(train.dest);
-
-  if (train.track === "乗") return `こんどの${dest}行きは水海道にて乗り換えとなります。`;
-  if (train.track === "始") return `こんどの${dest}行きは当駅始発の列車です。`;
-  if (train.track === "接") return `こんどの${dest}行きは水海道にて快速に接続いたします。`;
-
-  if (train.cars === "1") return `こんどの${dest}行きは1両編成でまいります。`;
-  if (train.type === "快速") return `終点取手まで各駅に停車いたします。`;
-
-  if (train.no === "") return `本日の上り列車はすべて終了いたしました。`;
-
-  return `こんどの${dest}行のご案内です`;
-}
-
-// 下り列車用の案内文生成
-function generateGuideMessageDown(train) {
-  if (!train) return "";
-  const dest = normalizeDest(train.dest);
-
-  if (train.track === "乗") return `こんどの${dest}行きは水海道にて乗り換えとなります。`;
-  if (train.track === "始") return `こんどの${dest}行きは当駅始発の列車です。`;
-  if (train.track === "接") return `こんどの${dest}行きは水海道にて快速に接続いたします。`;
-  if (train.track === "快") return `こんどの${dest}行きは守谷にて快速に接続いたします。`;
-  if (train.cars === "1") return `こんどの${dest}行きは1両編成でまいります。`;
-  if (train.type === "快速") return `こんどの${dest}行きは快速列車です。停車駅にご注意ください。`;
-
-  return `こんどの${dest}行のご案内です`;
-}
-/* ===== 判定 ===== */
-const delays = {}; // 遅延情報 { "1002": 5 }
-
-function getRemainingTime(train){
-  if(!train) return Infinity;
-
-  const now = new Date();
-  const [h,m] = train.time.split(':').map(Number);
-
-  // 発車時刻オブジェクト
-  let dep = new Date(now);
-  dep.setHours(h, m, 0, 0);
-
-  // 遅延時間を加算
-  const delay = delays[train.no] || 0;
-  dep.setMinutes(dep.getMinutes() + delay);
-
-  // 日付跨ぎ補正（4時基準）
-  const nowH = now.getHours();
-  if (h < 4 && nowH >= 4) {
-    // 発車時刻が0-3時台で、現在時刻が4時以降なら翌日の列車
-    dep.setDate(dep.getDate() + 1);
-  } else if (h >= 4 && nowH < 4) {
-    // 発車時刻が4時以降で、現在時刻が0-3時台の場合、前日の列車
-    dep.setDate(dep.getDate() - 1);
-  }
-
-  return (dep - now)/1000; // 残り秒
-}
-
-
-function isArrivingSoon(train){
-  if(!train) return false;
-
-  const diffSec = getRemainingTime(train);
-
-  // 表示開始時刻（分）
-  const beforeSec = (train.arrivalMin || 1) * 60;
-
-  // 表示開始から1分間だけ表示
-  return diffSec <= beforeSec && diffSec > beforeSec - 60;
-}
-
-
-function getNextTrains(trains){
-  const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
-  return trains.filter(t=>{
-    const [h,m] = t.time.split(':').map(Number);
-    const delay = delays[t.no] || 0;
-    let trainMinutes = h*60 + m + delay;
-
-    // 0時台～3:59は日付跨ぎとして加算24h
-    if(h < 4 && now.getHours() >= 4){
-      trainMinutes += 24*60;
-    }
-
-    return trainMinutes > nowMinutes;
-  }).slice(0,2);
-}
-
-
-/* ===== 表示 ===== */
-let showGuideSecondRow = false;
-let currentGuideMessageUp = "";
-let currentGuideMessageDown = "";
-let manualDayType = null; // "weekday" | "holiday" | null
-
-// 案内スクロールを2分ごとに1回だけ表示
-let guideTimer = null;
-
-function showGuideOnce(){
-
-  const upTrains = getNextTrains(trainsUp);
-  const downTrains = getNextTrains(trainsDown);
-
-  const firstTrainUp = upTrains[0];
-  const firstTrainDown = downTrains[0];
-
-  currentGuideMessageUp =
-    generateGuideMessageUp(firstTrainUp);
-
-  currentGuideMessageDown =
-    generateGuideMessageDown(firstTrainDown);
-
-  showGuideSecondRow = true;
-
-  /*
-   * 案内表示を開始
-   */
-  updateBoard();
-
-  /*
-   * 前回のタイマーが残っていたら解除
-   */
-  if (guideTimer !== null) {
-    clearTimeout(guideTimer);
-  }
-
-  /*
-   * 15秒後に必ず通常表示へ戻す
-   */
-  guideTimer = setTimeout(() => {
-
-    showGuideSecondRow = false;
-
-    /*
-     * スクロール表示を強制的に終了して
-     * 通常の2列車表示を再構築する
-     */
-    updateBoard();
-
-    guideTimer = null;
-
-  }, 15000);
-}
-
-
-setInterval(showGuideOnce, 30000);
-
-/* 30秒ごとの表示切替 */
-let showDelayNormal = true;
-setInterval(()=>{
-  showDelayNormal = !showDelayNormal;
-  updateBoard();
-}, 30000);
-
-/* ===== 行レンダリング ===== */
-function renderRow(train){
-  if(!train) return `<div class="row" style="height:50px;"></div>`;
-
-  const delay = delays[train.no] || 0;
-  const depTimeStr = train.time;
-
-  let displayTimeHtml;
-  if(delay > 0){
-    displayTimeHtml = showDelayNormal
-      ? `<span>${depTimeStr}</span>`
-      : `<span class="delay">遅れ${delay}分</span>`;
-  } else {
-    displayTimeHtml = `<span>${depTimeStr}</span>`;
-  }
-
-  return `
-    <div class="row">
-      <div class="type ${train.type==='快速'?'rapid':''}">
-        ${lang==='ja'?train.type:typeMap[train.type]}
-      </div>
-      <div class="dest">${lang==='ja'?train.dest:destMap[train.dest]}</div>
-      <div class="time2">${displayTimeHtml}</div>
-    </div>
-  `;
-}
-
-function renderBlock(b){
-  const firstTrain = b.trains[0];
-  const secondTrain = b.trains[1];
-  const arriving = firstTrain ? isArrivingSoon(firstTrain) : false;
-
-  let html = `
-  <div class="block" data-direction="${b.direction}">
-    <div class="block-title">
-      <div class="no">${b.noLeft}</div>
-      <div style="text-align:center">${b.title}</div>
-      <div class="no">${b.noRight}</div>
-    </div>
-    <div class="header">
-      <div>種別</div><div>行先</div><div>発車時刻</div>
-    </div>
-    <div class="table">`;
-
-  // 1行目
-  html += renderRow(firstTrain);
-
-  // 2行目
-  if(arriving){
-    html += `<div class="row arrival blink"><div>列車がまいります</div></div>`;
-  } else if(showGuideSecondRow){
-    const msg = b.title.includes("上り") ? currentGuideMessageUp : currentGuideMessageDown;
-    if(msg && !msg.includes("ご案内です")){
-      html += `<div class="row arrival scroll"><div><span>${msg}</span></div></div>`;
-    } else {
-      html += renderRow(secondTrain);
-    }
-  } else {
-    html += renderRow(secondTrain);
-  }
-
-  html += `</div></div>`;
-  return html;
-}
-
-/* ===== ボード更新 ===== */
-function updateBoard(){
-
-  const board = document.getElementById("board");
-
-  if (!board) return;
-
-  const up = {
-    noLeft: "2",
-    noRight: "1",
-    title: "上り　取手方面",
-    direction: "up",
-    trains: getNextTrains(trainsUp)
-  };
-
-  const down = {
-    noLeft: "4",
-    noRight: "3",
-    title: "下り　守谷・水海道・下館方面",
-    direction: "down",
-    trains: getNextTrains(trainsDown)
-  };
-
-  /*
-   * 現在表示されている案内スクロール。
-   */
-  const scrolling =
-    board.querySelector(".row.arrival.scroll");
-
-  /*
-   * 「列車がまいります」は常に最新状態を
-   * 優先して再描画する。
-   */
-  const approaching =
-    board.querySelector(".row.arrival.blink");
-
-  /*
-   * 案内スクロール中は、通常の1秒更新では
-   * DOMを書き換えない。
-   *
-   * ただし showGuideSecondRow が false になった場合は
-   * スクロール終了なので必ず再描画する。
-   */
-  if (
-    scrolling &&
-    showGuideSecondRow &&
-    !approaching
-  ) {
-    return;
-  }
-
-  /*
-   * 通常表示へ戻す。
-   */
-  board.innerHTML = window.innerWidth >= 1250
-    ? `<div>${renderBlock(down)}</div><div>${renderBlock(up)}</div>`
-    : `<div>${renderBlock(up)}</div><div>${renderBlock(down)}</div>`;
-}
-
-
-
-
-/* ===== 現在時刻 & 次列車更新 ===== */
-function updateTime(){
-  const d = new Date();
-
-  const nowElement = document.getElementById("now");
-
-  if (nowElement) {
-    nowElement.textContent =
-      d.getHours().toString().padStart(2,'0') +
-      ":" +
-      d.getMinutes().toString().padStart(2,'0');
-  } else {
-    console.warn("デバッグ: #now が見つかりません");
-  }
-
-  updateNextTrains();
-}
-
-
-
-/* ===== 遅延設定 ===== */
-document.getElementById("addDelay").addEventListener("click", ()=>{
-
-  const trainNo =
-    document.getElementById("delayTrainNo").value.trim();
-
-  const minutes =
-    parseInt(
-      document.getElementById("delayMinutes").value,
-      10
-    );
-
-  if (!trainNo || isNaN(minutes)) {
-    alert("列車番号と遅延時間を正しく入力してください");
-    return;
-  }
-
-  delays[trainNo] = minutes;
-
-  alert(
-    `${trainNo}列車に${minutes}分の遅延を設定しました`
-  );
-
-  /*
-   * 案内スクロール中なら、
-   * スクロールを途中でリセットしない。
-   */
-  const scrolling =
-    document.querySelector(".row.arrival.scroll");
-
-  if (!scrolling) {
-    updateBoard();
-  }
-
-});
-
-
-/* ===== 初期処理 ===== */
-let lang='ja';
-setInterval(()=>{
-  lang = (lang==='ja') ? 'en':'ja';
-  updateBoard();
-},15000);
-
-// 日本の祝日（必要に応じて追加・更新）
 const holidays = {
   2026: [
-    "2026-01-01", // 元日
-    "2026-01-12", // 成人の日
-    "2026-02-11", // 建国記念の日
-    "2026-02-23", // 天皇誕生日
-    "2026-03-20", // 春分の日
-    "2026-04-29", // 昭和の日
-    "2026-05-03", // 憲法記念日
-    "2026-05-04", // みどりの日
-    "2026-05-05", // こどもの日
-    "2026-07-20", // 海の日
-    "2026-08-11", // 山の日
-    "2026-09-21", // 敬老の日
-    "2026-09-23", // 秋分の日
-    "2026-10-12", // スポーツの日
-    "2026-11-03", // 文化の日
-    "2026-11-23"  // 勤労感謝の日
+    "2026-01-01",
+    "2026-01-12",
+    "2026-02-11",
+    "2026-02-23",
+    "2026-03-20",
+    "2026-04-29",
+    "2026-05-03",
+    "2026-05-04",
+    "2026-05-05",
+    "2026-07-20",
+    "2026-08-11",
+    "2026-09-21",
+    "2026-09-23",
+    "2026-10-12",
+    "2026-11-03",
+    "2026-11-23"
   ]
 };
 
-function updateDateInfo(){
 
-  const d = new Date();
+/* =========================================================
+   3. アプリ状態
+   ========================================================= */
 
-  const y = d.getFullYear();
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
+const AppState = {
 
-  const week = d.getDay();
-  const isWeekend = (week === 0 || week === 6);
-  const isHoliday = isJapaneseHoliday(d);
+  // 表示言語
+  lang: "ja",
 
-  const todayDate =
-    document.getElementById("todayDate");
+  // ダイヤ
+  dayType: null,
+  manualDayType: null,
 
-  const dayType =
-    document.getElementById("dayType");
+  // 列車データ
+  trainsUp: [],
+  trainsDown: [],
+
+  // 遅延
+  delays: {},
+
+  // 案内表示
+  showGuide: false,
+  guideTimer: null,
+
+  guideMessageUp: "",
+  guideMessageDown: "",
+
+  // 遅延表示
+  showDelayNormal: true
+};
 
 
-  if (todayDate) {
+/* =========================================================
+   4. DOM
+   ========================================================= */
 
-    todayDate.textContent =
-      `${y}年${String(m).padStart(2,"0")}月${String(day).padStart(2,"0")}日`;
+const DOM = {
 
-  }
+  board: document.getElementById("board"),
+  now: document.getElementById("now"),
+
+  delayTrainNo: document.getElementById("delayTrainNo"),
+  delayMinutes: document.getElementById("delayMinutes"),
+  addDelay: document.getElementById("addDelay"),
+
+  btnAuto: document.getElementById("btnAuto"),
+  btnWeekday: document.getElementById("btnWeekday"),
+  btnHoliday: document.getElementById("btnHoliday"),
+
+  timetableStatus: document.getElementById("timetableStatus")
+};
 
 
-  if (dayType) {
+/* =========================================================
+   5. 共通ユーティリティ
+   ========================================================= */
 
-    dayType.textContent =
-      (isWeekend || isHoliday)
-        ? "休日ダイヤ"
-        : "平日ダイヤ";
+function normalizeDest(dest) {
 
-  }
-
+  return String(dest || "")
+    .replace(/\s+/g, "");
 }
 
 
-// 祝日判定
-function isJapaneseHoliday(date){
+function isJapaneseHoliday(date) {
+
   const y = date.getFullYear();
-  const m = (date.getMonth() + 1).toString().padStart(2, "0");
-  const d = date.getDate().toString().padStart(2, "0");
+
+  const m = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+
+  const d = String(
+    date.getDate()
+  ).padStart(2, "0");
+
   const key = `${y}-${m}-${d}`;
 
   return holidays[y]?.includes(key) ?? false;
 }
 
-function loadTimetableByDayType(){
-  let dayType;
 
-  if(manualDayType){
-    dayType = manualDayType; // 手動優先
-  } else {
-    const now = new Date();
-    const week = now.getDay();
-    const isWeekend = (week === 0 || week === 6);
-    const isHoliday = isJapaneseHoliday(now);
-    dayType = (isWeekend || isHoliday) ? "holiday" : "weekday";
+function getAutomaticDayType(date = new Date()) {
+
+  const day = date.getDay();
+
+  const weekend =
+    day === 0 ||
+    day === 6;
+
+  const holiday =
+    isJapaneseHoliday(date);
+
+  return (
+    weekend ||
+    holiday
+  )
+    ? "holiday"
+    : "weekday";
+}
+
+
+/* =========================================================
+   6. CSV
+   ========================================================= */
+
+function parseCsv(csv) {
+
+  return csv
+    .trim()
+    .split("\n")
+    .map(line => {
+
+      const c = line.split(",");
+
+      return {
+        no: c[0],
+        dest: c[1],
+        track: c[2],
+        time: c[3],
+        type: c[4],
+        trackno: c[5],
+        cars: c[6],
+        arrivalMin: Number(c[7] || 1)
+      };
+
+    });
+}
+
+
+/* =========================================================
+   7. 時刻表管理
+   ========================================================= */
+
+function loadTimetable() {
+
+  const dayType =
+    AppState.manualDayType ||
+    getAutomaticDayType();
+
+  /*
+   * 同じダイヤなら何もしない
+   */
+
+  if (
+    AppState.dayType === dayType &&
+    AppState.trainsUp.length > 0
+  ) {
+    updateTimetableStatus();
+    return;
   }
 
-  if(currentDayType === dayType) return;
-  currentDayType = dayType;
+  AppState.dayType = dayType;
 
-  if(dayType === "holiday"){
-    trainsUp = parseCsv(csvUpHoliday);
-    trainsDown = parseCsv(csvDownHoliday);
+  if (dayType === "holiday") {
+
+    AppState.trainsUp =
+      parseCsv(csvUpHoliday);
+
+    AppState.trainsDown =
+      parseCsv(csvDownHoliday);
+
   } else {
-    trainsUp = parseCsv(csvUpWeekday);
-    trainsDown = parseCsv(csvDownWeekday);
+
+    AppState.trainsUp =
+      parseCsv(csvUpWeekday);
+
+    AppState.trainsDown =
+      parseCsv(csvDownWeekday);
   }
 
-  updateBoard();
-  updateNextTrains();
+  updateTimetableStatus();
+
+  refreshBoard();
+}
+
+
+/* =========================================================
+   8. 列車時刻計算
+   ========================================================= */
+
+function getRemainingTime(train) {
+
+  if (!train) {
+    return Infinity;
+  }
+
+  const now = new Date();
+
+  const [
+    hour,
+    minute
+  ] = train.time
+    .split(":")
+    .map(Number);
+
+  let departure =
+    new Date(now);
+
+  departure.setHours(
+    hour,
+    minute,
+    0,
+    0
+  );
+
+  /*
+   * 遅延
+   */
+
+  const delay =
+    AppState.delays[train.no] || 0;
+
+  departure.setMinutes(
+    departure.getMinutes() + delay
+  );
+
+  /*
+   * 4時基準の日付補正
+   */
+
+  const nowHour =
+    now.getHours();
+
+  if (
+    hour < 4 &&
+    nowHour >= 4
+  ) {
+
+    departure.setDate(
+      departure.getDate() + 1
+    );
+
+  } else if (
+    hour >= 4 &&
+    nowHour < 4
+  ) {
+
+    departure.setDate(
+      departure.getDate() - 1
+    );
+  }
+
+  return (
+    departure - now
+  ) / 1000;
+}
+
+
+function getNextTrains(trains) {
+
+  const now =
+    new Date();
+
+  const nowMinutes =
+    now.getHours() * 60 +
+    now.getMinutes();
+
+  return trains
+    .filter(train => {
+
+      const [
+        hour,
+        minute
+      ] = train.time
+        .split(":")
+        .map(Number);
+
+      const delay =
+        AppState.delays[train.no] || 0;
+
+      let trainMinutes =
+        hour * 60 +
+        minute +
+        delay;
+
+      if (
+        hour < 4 &&
+        now.getHours() >= 4
+      ) {
+
+        trainMinutes += 24 * 60;
+      }
+
+      return trainMinutes > nowMinutes;
+
+    })
+    .slice(0, 2);
+}
+
+
+function isArrivingSoon(train) {
+
+  if (!train) {
+    return false;
+  }
+
+  const remaining =
+    getRemainingTime(train);
+
+  const beforeSec =
+    (train.arrivalMin || 1) * 60;
+
+  return (
+    remaining <= beforeSec &&
+    remaining > beforeSec - 60
+  );
+}
+
+
+/* =========================================================
+   9. 案内文
+   ========================================================= */
+
+function generateGuideMessageUp(train) {
+
+  if (!train) {
+    return "";
+  }
+
+  const dest =
+    normalizeDest(train.dest);
+
+  if (train.track === "乗") {
+    return `こんどの${dest}行きは水海道にて乗り換えとなります。`;
+  }
+
+  if (train.track === "始") {
+    return `こんどの${dest}行きは当駅始発の列車です。`;
+  }
+
+  if (train.track === "接") {
+    return `こんどの${dest}行きは水海道にて快速に接続いたします。`;
+  }
+
+  if (train.cars === "1") {
+    return `こんどの${dest}行きは1両編成でまいります。`;
+  }
+
+  if (train.type === "快速") {
+    return "終点取手まで各駅に停車いたします。";
+  }
+
+  return `こんどの${dest}行のご案内です`;
+}
+
+
+function generateGuideMessageDown(train) {
+
+  if (!train) {
+    return "";
+  }
+
+  const dest =
+    normalizeDest(train.dest);
+
+  if (train.track === "乗") {
+    return `こんどの${dest}行きは水海道にて乗り換えとなります。`;
+  }
+
+  if (train.track === "始") {
+    return `こんどの${dest}行きは当駅始発の列車です。`;
+  }
+
+  if (train.track === "接") {
+    return `こんどの${dest}行きは水海道にて快速に接続いたします。`;
+  }
+
+  if (train.track === "快") {
+    return `こんどの${dest}行きは守谷にて快速に接続いたします。`;
+  }
+
+  if (train.cars === "1") {
+    return `こんどの${dest}行きは1両編成でまいります。`;
+  }
+
+  if (train.type === "快速") {
+    return `こんどの${dest}行きは快速列車です。停車駅にご注意ください。`;
+  }
+
+  return `こんどの${dest}行のご案内です`;
+}
+
+
+/* =========================================================
+   10. 行描画
+   ========================================================= */
+
+function renderRow(train) {
+
+  if (!train) {
+
+    return `
+      <div class="row" style="height:50px;"></div>
+    `;
+  }
+
+  const delay =
+    AppState.delays[train.no] || 0;
+
+  let timeHtml;
+
+  if (delay > 0) {
+
+    timeHtml =
+      AppState.showDelayNormal
+
+        ? `<span>${train.time}</span>`
+
+        : `<span class="delay">
+             遅れ${delay}分
+           </span>`;
+
+  } else {
+
+    timeHtml =
+      `<span>${train.time}</span>`;
+  }
+
+  const type =
+    AppState.lang === "ja"
+      ? train.type
+      : typeMap[train.type];
+
+  const dest =
+    AppState.lang === "ja"
+      ? train.dest
+      : destMap[train.dest];
+
+  return `
+    <div class="row">
+
+      <div class="type ${train.type === "快速" ? "rapid" : ""}">
+        ${type}
+      </div>
+
+      <div class="dest">
+        ${dest}
+      </div>
+
+      <div class="time2">
+        ${timeHtml}
+      </div>
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   11. ブロック描画
+   ========================================================= */
+
+function renderBlock(block) {
+
+  const firstTrain =
+    block.trains[0];
+
+  const secondTrain =
+    block.trains[1];
+
+  const arriving =
+    isArrivingSoon(firstTrain);
+
+  let html = `
+
+    <div
+      class="block"
+      data-direction="${block.direction}"
+    >
+
+      <div class="block-title">
+
+        <div class="no">
+          ${block.noLeft}
+        </div>
+
+        <div style="text-align:center">
+          ${block.title}
+        </div>
+
+        <div class="no">
+          ${block.noRight}
+        </div>
+
+      </div>
+
+      <div class="header">
+        <div>種別</div>
+        <div>行先</div>
+        <div>発車時刻</div>
+      </div>
+
+      <div class="table">
+  `;
+
+
+  /*
+   * 1列車目
+   */
+
+  html +=
+    renderRow(firstTrain);
+
+
+  /*
+   * 2列車目
+   */
+
+  if (arriving) {
+
+    html += `
+      <div class="row arrival blink">
+        <div>列車がまいります</div>
+      </div>
+    `;
+
+  } else if (AppState.showGuide) {
+
+    const message =
+      block.direction === "up"
+        ? AppState.guideMessageUp
+        : AppState.guideMessageDown;
+
+    if (
+      message &&
+      !message.includes("ご案内です")
+    ) {
+
+      html += `
+        <div class="row arrival scroll">
+          <div>
+            <span>${message}</span>
+          </div>
+        </div>
+      `;
+
+    } else {
+
+      html +=
+        renderRow(secondTrain);
+    }
+
+  } else {
+
+    html +=
+      renderRow(secondTrain);
+  }
+
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  return html;
+}
+
+
+/* =========================================================
+   12. ボード描画
+   ========================================================= */
+
+function refreshBoard() {
+
+  if (!DOM.board) {
+    return;
+  }
+
+  /*
+   * 案内スクロール中は
+   * 不要なDOM再構築をしない
+   */
+
+  const scrolling =
+    DOM.board.querySelector(
+      ".row.arrival.scroll"
+    );
+
+  const approaching =
+    DOM.board.querySelector(
+      ".row.arrival.blink"
+    );
+
+  if (
+    scrolling &&
+    AppState.showGuide &&
+    !approaching
+  ) {
+    return;
+  }
+
+
+  const up = {
+
+    noLeft: "",
+    noRight: "",
+
+    title:
+      "上り　取手方面",
+
+    direction:
+      "up",
+
+    trains:
+      getNextTrains(
+        AppState.trainsUp
+      )
+  };
+
+
+  const down = {
+
+    noLeft: "",
+    noRight: "",
+
+    title:
+      "下り　守谷・水海道・下館方面",
+
+    direction:
+      "down",
+
+    trains:
+      getNextTrains(
+        AppState.trainsDown
+      )
+  };
+
+
+  const wide =
+    window.innerWidth >= 1250;
+
+
+  if (wide) {
+
+    DOM.board.innerHTML = `
+      <div>
+        ${renderBlock(down)}
+      </div>
+
+      <div>
+        ${renderBlock(up)}
+      </div>
+    `;
+
+  } else {
+
+    DOM.board.innerHTML = `
+      <div>
+        ${renderBlock(up)}
+      </div>
+
+      <div>
+        ${renderBlock(down)}
+      </div>
+    `;
+  }
+}
+
+
+/* =========================================================
+   13. 案内表示
+   ========================================================= */
+
+function startGuideDisplay() {
+
+  const up =
+    getNextTrains(
+      AppState.trainsUp
+    );
+
+  const down =
+    getNextTrains(
+      AppState.trainsDown
+    );
+
+
+  AppState.guideMessageUp =
+    generateGuideMessageUp(up[0]);
+
+
+  AppState.guideMessageDown =
+    generateGuideMessageDown(down[0]);
+
+
+  AppState.showGuide =
+    true;
+
+
+  refreshBoard();
+
+
+  if (
+    AppState.guideTimer !== null
+  ) {
+
+    clearTimeout(
+      AppState.guideTimer
+    );
+  }
+
+
+  AppState.guideTimer =
+    setTimeout(() => {
+
+      AppState.showGuide =
+        false;
+
+      refreshBoard();
+
+      AppState.guideTimer =
+        null;
+
+    }, 15000);
+}
+
+
+/* =========================================================
+   14. 時計
+   ========================================================= */
+
+function updateClock() {
+
+  if (!DOM.now) {
+    return;
+  }
+
+  const now =
+    new Date();
+
+  DOM.now.textContent =
+    `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
+
+
+/* =========================================================
+   15. 遅延
+   ========================================================= */
+
+function addDelay() {
+
+  if (
+    !DOM.delayTrainNo ||
+    !DOM.delayMinutes
+  ) {
+    return;
+  }
+
+  const trainNo =
+    DOM.delayTrainNo.value.trim();
+
+  const minutes =
+    parseInt(
+      DOM.delayMinutes.value,
+      10
+    );
+
+
+  if (
+    !trainNo ||
+    Number.isNaN(minutes)
+  ) {
+
+    alert(
+      "列車番号と遅延時間を正しく入力してください"
+    );
+
+    return;
+  }
+
+
+  AppState.delays[trainNo] =
+    minutes;
+
+
+  alert(
+    `${trainNo}列車に${minutes}分の遅延を設定しました`
+  );
+
+
+  const scrolling =
+    DOM.board?.querySelector(
+      ".row.arrival.scroll"
+    );
+
+
+  if (!scrolling) {
+
+    refreshBoard();
+  }
+}
+
+
+/* =========================================================
+   16. 言語切替
+   ========================================================= */
+
+function toggleLanguage() {
+
+  AppState.lang =
+    AppState.lang === "ja"
+      ? "en"
+      : "ja";
+
+  refreshBoard();
+}
+
+
+/* =========================================================
+   17. 遅延表示切替
+   ========================================================= */
+
+function toggleDelayDisplay() {
+
+  AppState.showDelayNormal =
+    !AppState.showDelayNormal;
+
+  refreshBoard();
+}
+
+
+/* =========================================================
+   18. ダイヤボタン
+   ========================================================= */
+
+function setManualDayType(type) {
+
+  AppState.manualDayType =
+    type;
+
+  /*
+   * 同じ種別でも
+   * 強制再読み込みできるようにする
+   */
+
+  AppState.dayType =
+    null;
+
+  loadTimetable();
+
   updateTimetableStatus();
 }
 
-document.getElementById("btnAuto").addEventListener("click", ()=>{
-  manualDayType = null;
-  loadTimetableByDayType();
-  setActiveButton("btnAuto");
-});
 
-document.getElementById("btnWeekday").addEventListener("click", ()=>{
-  manualDayType = "weekday";
-  loadTimetableByDayType();
-  setActiveButton("btnWeekday");
-});
+function setAutomaticDayType() {
 
-document.getElementById("btnHoliday").addEventListener("click", ()=>{
-  manualDayType = "holiday";
-  loadTimetableByDayType();
-  setActiveButton("btnHoliday");
-});
+  AppState.manualDayType =
+    null;
 
-function updateTimetableStatus(){
-  const el = document.getElementById("timetableStatus");
-  if(manualDayType === "weekday"){
-    el.textContent = "【平日ダイヤ 手動指定】";
-  } else if(manualDayType === "holiday"){
-    el.textContent = "【休日ダイヤ 手動指定】";
+  AppState.dayType =
+    null;
+
+  loadTimetable();
+
+  updateTimetableStatus();
+}
+
+
+function updateTimetableStatus() {
+
+  if (!DOM.timetableStatus) {
+    return;
+  }
+
+  if (
+    AppState.manualDayType ===
+    "weekday"
+  ) {
+
+    DOM.timetableStatus.textContent =
+      "【平日ダイヤ 手動指定】";
+
+  } else if (
+    AppState.manualDayType ===
+    "holiday"
+  ) {
+
+    DOM.timetableStatus.textContent =
+      "【休日ダイヤ 手動指定】";
+
   } else {
-    el.textContent = "【自動切替中】";
+
+    DOM.timetableStatus.textContent =
+      "【自動切替中】";
   }
 }
 
-// 初回 & 日付切替対策
-updateDateInfo();
-setInterval(updateDateInfo, 60 * 1000);
-
-updateTime();
-setInterval(updateTime,1000);
-window.addEventListener('resize',updateBoard);
-
-</script>
-
-<script>
-/* =========================================================
-   音声システム 完成版
-   iPad / iPhone Safari対応
-   ========================================================= */
-
 
 /* =========================================================
-   音声ファイル
+   19. イベント
    ========================================================= */
 
-const upSound = new Audio("./up.mp3");
-const downSound = new Audio("./dw.mp3");
+function setupMainEvents() {
 
-const upJingle = new Audio("./uj.mp3");
-const downJingle = new Audio("./dj.mp3");
+  if (DOM.addDelay) {
 
-const mel = new Audio("./mel.mp3");
-const cls = new Audio("./cls.mp3");
-
-
-/* =========================================================
-   音声一覧
-   ========================================================= */
-
-const audioList = [
-    upSound,
-    downSound,
-    upJingle,
-    downJingle,
-    mel,
-    cls
-];
-
-
-/* =========================================================
-   基本設定
-   ========================================================= */
-
-audioList.forEach(audio => {
-
-    audio.preload = "auto";
-
-    /*
-     * 音声ファイルを読み込む
-     */
-    audio.load();
-
-});
-
-
-upSound.loop = true;
-downSound.loop = true;
-mel.loop = true;
-
-
-/* =========================================================
-   音声有効状態
-   ========================================================= */
-
-let audioEnabled = false;
-
-
-/* =========================================================
-   接近状態
-   ========================================================= */
-
-let wasUpApproaching = false;
-let wasDownApproaching = false;
-
-
-/* =========================================================
-   ジングル状態
-   ========================================================= */
-
-let upJinglePlaying = false;
-let downJinglePlaying = false;
-
-
-/* =========================================================
-   音声デバッグ
-   ========================================================= */
-
-function updateAudioDebug() {
-
-    const debug =
-        document.getElementById("audioDebug");
-
-    if (!debug) return;
-
-
-    function state(audio) {
-
-        if (!audio) {
-            return "存在しません";
-        }
-
-        if (audio.error) {
-
-            return (
-                "ERROR " +
-                audio.error.code +
-                " / " +
-                (audio.error.message || "")
-            );
-
-        }
-
-        if (audio.ended) {
-            return "終了";
-        }
-
-        if (audio.paused) {
-            return "停止中";
-        }
-
-        return "再生中";
-    }
-
-
-    function time(audio) {
-
-        if (!audio) {
-            return "----";
-        }
-
-        return Number.isFinite(audio.currentTime)
-            ? audio.currentTime.toFixed(2)
-            : "----";
-    }
-
-
-    function ready(audio) {
-
-        if (!audio) {
-            return "----";
-        }
-
-        return audio.readyState;
-    }
-
-
-    debug.textContent =
-`===== 音声デバッグ =====
-
-音声有効:
-${audioEnabled ? "YES" : "NO"}
-
---------------------------------
-
-up.mp3
-状態: ${state(upSound)}
-時間: ${time(upSound)}
-readyState: ${ready(upSound)}
-
-dw.mp3
-状態: ${state(downSound)}
-時間: ${time(downSound)}
-readyState: ${ready(downSound)}
-
-uj.mp3
-状態: ${state(upJingle)}
-時間: ${time(upJingle)}
-readyState: ${ready(upJingle)}
-
-dj.mp3
-状態: ${state(downJingle)}
-時間: ${time(downJingle)}
-readyState: ${ready(downJingle)}
-
-mel.mp3
-状態: ${state(mel)}
-時間: ${time(mel)}
-readyState: ${ready(mel)}
-
-cls.mp3
-状態: ${state(cls)}
-時間: ${time(cls)}
-readyState: ${ready(cls)}
-
---------------------------------
-
-上り接近:
-${wasUpApproaching ? "YES" : "NO"}
-
-下り接近:
-${wasDownApproaching ? "YES" : "NO"}
-
-上りジングル:
-${upJinglePlaying ? "PLAYING" : "STOP"}
-
-下りジングル:
-${downJinglePlaying ? "PLAYING" : "STOP"}
-`;
-}
-
-
-/* =========================================================
-   音声エラー監視
-   ========================================================= */
-
-audioList.forEach(audio => {
-
-    audio.addEventListener("error", () => {
-
-        console.error(
-            "[音声ファイルエラー]",
-            audio.src,
-            audio.error
-        );
-
-        updateAudioDebug();
-
-    });
-
-
-    audio.addEventListener("loadeddata", () => {
-
-        console.log(
-            "[音声読み込み完了]",
-            audio.src
-        );
-
-        updateAudioDebug();
-
-    });
-
-});
-
-
-/* =========================================================
-   安全な停止
-   ========================================================= */
-
-function safeStop(audio) {
-
-    if (!audio) return;
-
-    try {
-
-        audio.pause();
-
-        /*
-         * currentTimeを戻す
-         */
-        audio.currentTime = 0;
-
-    } catch (error) {
-
-        console.warn(
-            "[音声停止エラー]",
-            error
-        );
-
-    }
-}
-
-
-/* =========================================================
-   安全な再生
-   ========================================================= */
-
-async function safePlay(audio, name) {
-
-    if (!audioEnabled) {
-
-        console.warn(
-            `${name}: 音声が有効化されていません`
-        );
-
-        updateAudioDebug();
-
-        return false;
-    }
-
-
-    if (!audio) {
-
-        console.error(
-            `${name}: Audioオブジェクトがありません`
-        );
-
-        return false;
-    }
-
-
-    try {
-
-        console.log(
-            `[音声再生開始] ${name}`
-        );
-
-
-        await audio.play();
-
-
-        console.log(
-            `[音声再生成功] ${name}`
-        );
-
-
-        updateAudioDebug();
-
-        return true;
-
-
-    } catch (error) {
-
-        console.error(
-            `[音声再生失敗] ${name}`,
-            error
-        );
-
-
-        updateAudioDebug();
-
-        return false;
-    }
-}
-
-
-/* =========================================================
-   音声有効化
-   ========================================================= */
-
-async function enableAudio() {
-
-    if (audioEnabled) {
-
-        updateAudioDebug();
-
-        return true;
-    }
-
-
-    console.log(
-        "[音声] ユーザー操作による音声有効化開始"
+    DOM.addDelay.addEventListener(
+      "click",
+      addDelay
     );
+  }
 
 
-    let successCount = 0;
+  if (DOM.btnAuto) {
 
-
-    /*
-     * ユーザー操作中に全音声を一度再生する。
-     *
-     * iPad Safariでは、最初のplay()をユーザー操作から
-     * 行っておくことが重要。
-     */
-
-    for (const audio of audioList) {
-
-        try {
-
-            audio.currentTime = 0;
-
-            await audio.play();
-
-            audio.pause();
-
-            audio.currentTime = 0;
-
-            successCount++;
-
-        } catch (error) {
-
-            console.warn(
-                "[音声初期化失敗]",
-                audio.src,
-                error
-            );
-
-        }
-    }
-
-
-    /*
-     * 少なくとも1つの音声が再生できれば有効化
-     */
-    if (successCount > 0) {
-
-        audioEnabled = true;
-
-    } else {
-
-        audioEnabled = false;
-
-    }
-
-
-    const button =
-        document.getElementById(
-            "enableAudioButton"
-        );
-
-
-    const status =
-        document.getElementById(
-            "audioStatus"
-        );
-
-
-    if (audioEnabled) {
-
-        if (button) {
-
-            button.textContent =
-                "🔊 音声有効";
-
-            button.style.background =
-                "#267a35";
-
-        }
-
-
-        if (status) {
-
-            status.textContent =
-                "音声は有効です。接近放送などが自動再生されます。";
-
-            status.style.color =
-                "#267a35";
-
-        }
-
-        console.log(
-            "[音声] 有効化成功",
-            successCount + "/" + audioList.length
-        );
-
-    } else {
-
-        if (button) {
-
-            button.textContent =
-                "🔊 音声を有効にする";
-
-            button.style.background =
-                "#222";
-
-        }
-
-
-        if (status) {
-
-            status.textContent =
-                "音声を有効化できませんでした。もう一度タップしてください。";
-
-            status.style.color =
-                "#cc0000";
-
-        }
-
-    }
-
-
-    updateAudioDebug();
-
-    return audioEnabled;
-}
-
-
-/* =========================================================
-   音声有効化ボタン
-   ========================================================= */
-
-const enableAudioButton =
-    document.getElementById(
-        "enableAudioButton"
+    DOM.btnAuto.addEventListener(
+      "click",
+      setAutomaticDayType
     );
+  }
 
 
-if (enableAudioButton) {
+  if (DOM.btnWeekday) {
 
-    enableAudioButton.addEventListener(
-        "click",
-        async () => {
-
-            await enableAudio();
-
-        }
+    DOM.btnWeekday.addEventListener(
+      "click",
+      () => {
+        setManualDayType("weekday");
+      }
     );
+  }
 
-}
 
+  if (DOM.btnHoliday) {
 
-/* =========================================================
-   ジングル再生
-   ========================================================= */
-
-async function playJingle(
-    audio,
-    name,
-    type
-) {
-
-    if (!audioEnabled) {
-
-        console.warn(
-            `${name}: 音声無効`
-        );
-
-        return false;
-    }
-
-
-    /*
-     * 二重再生防止
-     */
-
-    if (
-        type === "up" &&
-        upJinglePlaying
-    ) {
-
-        console.log(
-            `${name}: すでに再生中`
-        );
-
-        return false;
-    }
-
-
-    if (
-        type === "down" &&
-        downJinglePlaying
-    ) {
-
-        console.log(
-            `${name}: すでに再生中`
-        );
-
-        return false;
-    }
-
-
-    /*
-     * 再生中フラグを先にON
-     */
-    if (type === "up") {
-
-        upJinglePlaying = true;
-
-    } else {
-
-        downJinglePlaying = true;
-
-    }
-
-
-    /*
-     * 古いイベントを削除
-     */
-    audio.onended = null;
-
-
-    /*
-     * 再生終了イベント
-     */
-    audio.onended = () => {
-
-        console.log(
-            `[ジングル終了] ${name}`
-        );
-
-
-        if (type === "up") {
-
-            upJinglePlaying = false;
-
-        } else {
-
-            downJinglePlaying = false;
-
-        }
-
-
-        updateAudioDebug();
-
-    };
-
-
-    try {
-
-        /*
-         * 最初から再生
-         */
-        audio.pause();
-
-        audio.currentTime = 0;
-
-
-        console.log(
-            `[ジングル再生開始] ${name}`
-        );
-
-
-        await audio.play();
-
-
-        console.log(
-            `[ジングル再生成功] ${name}`
-        );
-
-
-        updateAudioDebug();
-
-        return true;
-
-
-    } catch (error) {
-
-        console.error(
-            `[ジングル再生失敗] ${name}`,
-            error
-        );
-
-
-        /*
-         * 再生失敗時
-         */
-        if (type === "up") {
-
-            upJinglePlaying = false;
-
-        } else {
-
-            downJinglePlaying = false;
-
-        }
-
-
-        updateAudioDebug();
-
-        return false;
-    }
-}
-
-
-/* =========================================================
-   上り接近放送
-   ========================================================= */
-
-async function handleUpApproach(
-    upApproaching
-) {
-
-    console.log(
-        `[上り接近判定] ${wasUpApproaching} → ${upApproaching}`
+    DOM.btnHoliday.addEventListener(
+      "click",
+      () => {
+        setManualDayType("holiday");
+      }
     );
+  }
 
 
-    /* =========================================
-       接近開始
-       ========================================= */
-
-    if (
-        upApproaching &&
-        !wasUpApproaching
-    ) {
-
-        console.log(
-            "上り：列車がまいります 開始"
-        );
-
-
-        /*
-         * ジングル停止
-         */
-        safeStop(upJingle);
-
-        upJinglePlaying = false;
-
-
-        /*
-         * 接近放送開始
-         */
-        if (audioEnabled) {
-
-            safeStop(upSound);
-
-            await safePlay(
-                upSound,
-                "up.mp3"
-            );
-
-        }
-
-    }
-
-
-    /* =========================================
-       接近中
-       ========================================= */
-
-    if (upApproaching) {
-
-        if (
-            audioEnabled &&
-            upSound.paused
-        ) {
-
-            await safePlay(
-                upSound,
-                "up.mp3"
-            );
-
-        }
-
-    }
-
-
-    /* =========================================
-       接近終了
-       ========================================= */
-
-    if (
-        !upApproaching &&
-        wasUpApproaching
-    ) {
-
-        console.log(
-            "上り：列車がまいります 終了"
-        );
-
-
-        /*
-         * 接近放送停止
-         */
-        safeStop(upSound);
-
-
-        /*
-         * ジングル
-         */
-        await playJingle(
-            upJingle,
-            "uj.mp3",
-            "up"
-        );
-
-    }
-
-
-    /*
-     * 状態保存
-     */
-    wasUpApproaching =
-        upApproaching;
+  window.addEventListener(
+    "resize",
+    refreshBoard
+  );
 }
 
 
 /* =========================================================
-   下り接近放送
+   20. メインタイマー
    ========================================================= */
 
-async function handleDownApproach(
-    downApproaching
-) {
-
-    console.log(
-        `[下り接近判定] ${wasDownApproaching} → ${downApproaching}`
-    );
-
-
-    /* =========================================
-       接近開始
-       ========================================= */
-
-    if (
-        downApproaching &&
-        !wasDownApproaching
-    ) {
-
-        console.log(
-            "下り：列車がまいります 開始"
-        );
-
-
-        /*
-         * ジングル停止
-         */
-        safeStop(downJingle);
-
-        downJinglePlaying = false;
-
-
-        /*
-         * 接近放送開始
-         */
-        if (audioEnabled) {
-
-            safeStop(downSound);
-
-            await safePlay(
-                downSound,
-                "dw.mp3"
-            );
-
-        }
-
-    }
-
-
-    /* =========================================
-       接近中
-       ========================================= */
-
-    if (downApproaching) {
-
-        if (
-            audioEnabled &&
-            downSound.paused
-        ) {
-
-            await safePlay(
-                downSound,
-                "dw.mp3"
-            );
-
-        }
-
-    }
-
-
-    /* =========================================
-       接近終了
-       ========================================= */
-
-    if (
-        !downApproaching &&
-        wasDownApproaching
-    ) {
-
-        console.log(
-            "下り：列車がまいります 終了"
-        );
-
-
-        /*
-         * 接近放送停止
-         */
-        safeStop(downSound);
-
-
-        /*
-         * 下りジングル
-         */
-        await playJingle(
-            downJingle,
-            "dj.mp3",
-            "down"
-        );
-
-    }
-
-
-    /*
-     * 状態保存
-     */
-    wasDownApproaching =
-        downApproaching;
-}
-
-
-/* =========================================================
-   接近状態を時刻から判定
-   ========================================================= */
-
-function checkApproachState() {
-
-    /*
-     * 画面DOMではなく、
-     * 実際の時刻表データから判定する。
-     *
-     * これによりupdateBoard()との競合を防ぐ。
-     */
-
-
-    const upTrains =
-        getNextTrains(trainsUp);
-
-
-    const downTrains =
-        getNextTrains(trainsDown);
-
-
-    const firstUp =
-        upTrains[0];
-
-
-    const firstDown =
-        downTrains[0];
-
-
-    const upApproaching =
-        firstUp
-            ? isArrivingSoon(firstUp)
-            : false;
-
-
-    const downApproaching =
-        firstDown
-            ? isArrivingSoon(firstDown)
-            : false;
-
-
-    return {
-        upApproaching,
-        downApproaching
-    };
-}
-
-
-/* =========================================================
-   音声メイン処理
-   ========================================================= */
-
-let audioCheckRunning = false;
-
-
-async function updateApproachSound() {
-
-    /*
-     * 前回の処理がまだ終わっていたら
-     * 二重実行しない。
-     */
-
-    if (audioCheckRunning) {
-
-        return;
-
-    }
-
-
-    audioCheckRunning = true;
-
-
-    try {
-
-        const state =
-            checkApproachState();
-
-
-        await handleUpApproach(
-            state.upApproaching
-        );
-
-
-        await handleDownApproach(
-            state.downApproaching
-        );
-
-
-        updateAudioDebug();
-
-    } catch (error) {
-
-        console.error(
-            "[音声メイン処理エラー]",
-            error
-        );
-
-    }
-
-
-    audioCheckRunning = false;
-}
-
-
-/* =========================================================
-   音声監視
-   ========================================================= */
-
+/*
+ * 時計
+ */
 setInterval(
-    updateApproachSound,
-    500
+  updateClock,
+  1000
+);
+
+
+/*
+ * ダイヤ自動切替確認
+ */
+setInterval(
+  loadTimetable,
+  60 * 1000
+);
+
+
+/*
+ * 案内表示
+ */
+setInterval(
+  startGuideDisplay,
+  30 * 1000
+);
+
+
+/*
+ * 日本語 / 英語切替
+ */
+setInterval(
+  toggleLanguage,
+  15 * 1000
+);
+
+
+/*
+ * 遅延表示切替
+ */
+setInterval(
+  toggleDelayDisplay,
+  30 * 1000
 );
 
 
 /* =========================================================
-   デバッグ更新
+   21. 初期化
    ========================================================= */
 
-setInterval(
-    updateAudioDebug,
-    500
-);
+function initializeMainSystem() {
 
+  setupMainEvents();
 
-/* =========================================================
-   スイッチ操作
-   ========================================================= */
+  loadTimetable();
 
-(() => {
+  updateClock();
 
-    const switches =
-        document.querySelectorAll(
-            ".switch"
-        );
+  updateTimetableStatus();
 
+  refreshBoard();
+}
 
-    switches.forEach(
-        switchElement => {
 
-            const onButton =
-                switchElement.querySelector(
-                    ".on-button"
-                );
+initializeMainSystem();
 
-
-            const offButton =
-                switchElement.querySelector(
-                    ".off-button"
-                );
-
-
-            const status =
-                switchElement.querySelector(
-                    ".status"
-                );
-
-
-            /* =========================================
-               ON
-               ========================================= */
-
-            onButton.addEventListener(
-                "click",
-                async () => {
-
-                    /*
-                     * ユーザー操作を利用して
-                     * 音声を有効化
-                     */
-
-                    if (!audioEnabled) {
-
-                        await enableAudio();
-
-                    }
-
-
-                    /*
-                     * すでにONなら終了
-                     */
-
-                    if (
-                        onButton.classList.contains(
-                            "pressed"
-                        )
-                    ) {
-
-                        return;
-
-                    }
-
-
-                    /*
-                     * ON状態
-                     */
-
-                    onButton.classList.add(
-                        "pressed"
-                    );
-
-
-                    switchElement.classList.add(
-                        "is-on"
-                    );
-
-
-                    status.textContent =
-                        "ON";
-
-
-                    /*
-                     * OFF音停止
-                     */
-
-                    safeStop(cls);
-
-
-                    /*
-                     * ON音再生
-                     */
-
-                    safeStop(mel);
-
-
-                    await safePlay(
-                        mel,
-                        "mel.mp3"
-                    );
-
-                }
-            );
-
-
-            /* =========================================
-               OFF
-               ========================================= */
-
-            offButton.addEventListener(
-                "click",
-                async () => {
-
-                    const wasOn =
-                        onButton.classList.contains(
-                            "pressed"
-                        );
-
-
-                    /*
-                     * ON音停止
-                     */
-
-                    if (wasOn) {
-
-                        safeStop(mel);
-
-                    }
-
-
-                    /*
-                     * OFF状態
-                     */
-
-                    onButton.classList.remove(
-                        "pressed"
-                    );
-
-
-                    switchElement.classList.remove(
-                        "is-on"
-                    );
-
-
-                    status.textContent =
-                        "OFF";
-
-
-                    /*
-                     * ON → OFFのときだけ
-                     * OFF音を再生
-                     */
-
-                    if (wasOn) {
-
-                        safeStop(cls);
-
-
-                        await safePlay(
-                            cls,
-                            "cls.mp3"
-                        );
-
-                    }
-
-                }
-            );
-
-        }
-    );
-
-})();
 </script>
 
 
