@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>関鉄発車標 ver1.4</title>
+<title>関鉄発車標 ver1.5</title>
 <link rel="shortcut icon" href="https://www.kantetsu.co.jp/cms/wp-content/themes/kr/img/favicon/favicon.ico">
 <style>
 body {
@@ -2488,18 +2488,106 @@ let downJinglePlaying = false;
 
 
 /* ---------------------------------------------------------
+   ジングル再生
+--------------------------------------------------------- */
+
+async function playJingle(audio, name, type) {
+
+    if (!audioEnabled) {
+        console.log(`${name}: 音声が無効です`);
+        return;
+    }
+
+    /*
+     * すでに再生中なら二重再生しない
+     */
+    if (type === "up" && upJinglePlaying) {
+        return;
+    }
+
+    if (type === "down" && downJinglePlaying) {
+        return;
+    }
+
+
+    /*
+     * 再生状態を先に設定
+     */
+    if (type === "up") {
+        upJinglePlaying = true;
+    } else {
+        downJinglePlaying = true;
+    }
+
+
+    /*
+     * 終了イベントを再生前に登録
+     */
+    audio.onended = () => {
+
+        if (type === "up") {
+            upJinglePlaying = false;
+        } else {
+            downJinglePlaying = false;
+        }
+
+        console.log(`${name}: 再生終了`);
+
+        updateAudioDebug();
+    };
+
+
+    try {
+
+        /*
+         * 念のため最初から
+         */
+        audio.pause();
+        audio.currentTime = 0;
+
+        console.log(`[ジングル再生開始] ${name}`);
+
+        await audio.play();
+
+        console.log(`[ジングル再生成功] ${name}`);
+
+    } catch (error) {
+
+        console.error(
+            `[ジングル再生失敗] ${name}`,
+            error
+        );
+
+        /*
+         * 再生失敗時は状態を戻す
+         */
+        if (type === "up") {
+            upJinglePlaying = false;
+        } else {
+            downJinglePlaying = false;
+        }
+
+    }
+
+    updateAudioDebug();
+}
+
+
+/* ---------------------------------------------------------
    上り接近放送
 --------------------------------------------------------- */
 
 async function handleUpApproach(upApproaching) {
-console.log(
+
+    console.log(
         `[上り接近判定] ${wasUpApproaching} → ${upApproaching}`
     );
+
+
     /* ================================
        接近開始
     ================================= */
 
-  
     if (upApproaching && !wasUpApproaching) {
 
         console.log("上り：列車がまいります 開始");
@@ -2508,7 +2596,6 @@ console.log(
          * ジングル停止
          */
         safeStop(upJingle);
-
         upJinglePlaying = false;
 
         /*
@@ -2532,9 +2619,6 @@ console.log(
 
     if (upApproaching) {
 
-        /*
-         * up.mp3が停止していたら再開
-         */
         if (
             audioEnabled &&
             upSound.paused
@@ -2562,39 +2646,16 @@ console.log(
         safeStop(upSound);
 
         /*
-         * ジングル再生
+         * ジングル
          */
-        if (
-            audioEnabled &&
-            !upJinglePlaying
-        ) {
-
-            upJinglePlaying = true;
-
-            safeStop(upJingle);
-
-            upJingle.currentTime = 0;
-
-            await safePlay(
-                upJingle,
-                "uj.mp3"
-            );
-
-            /*
-             * 再生終了後フラグ解除
-             */
-            upJingle.addEventListener(
-                "ended",
-                () => {
-                    upJinglePlaying = false;
-                },
-                { once: true }
-            );
-        }
+        await playJingle(
+            upJingle,
+            "uj.mp3",
+            "up"
+        );
     }
 
 
-  
     wasUpApproaching = upApproaching;
 }
 
@@ -2609,21 +2670,24 @@ async function handleDownApproach(downApproaching) {
         `[下り接近判定] ${wasDownApproaching} → ${downApproaching}`
     );
 
+
     /* ================================
        接近開始
     ================================= */
 
-    if (
-        downApproaching &&
-        !wasDownApproaching
-    ) {
+    if (downApproaching && !wasDownApproaching) {
 
         console.log("下り：列車がまいります 開始");
 
+        /*
+         * ジングル停止
+         */
         safeStop(downJingle);
-
         downJinglePlaying = false;
 
+        /*
+         * 接近放送開始
+         */
         if (audioEnabled) {
 
             safeStop(downSound);
@@ -2659,45 +2723,28 @@ async function handleDownApproach(downApproaching) {
        接近終了
     ================================= */
 
-    if (
-        !downApproaching &&
-        wasDownApproaching
-    ) {
+    if (!downApproaching && wasDownApproaching) {
 
         console.log("下り：列車がまいります 終了");
 
+        /*
+         * 接近放送停止
+         */
         safeStop(downSound);
 
-        if (
-            audioEnabled &&
-            !downJinglePlaying
-        ) {
-
-            downJinglePlaying = true;
-
-            safeStop(downJingle);
-
-            downJingle.currentTime = 0;
-
-            await safePlay(
-                downJingle,
-                "dj.mp3"
-            );
-
-            downJingle.addEventListener(
-                "ended",
-                () => {
-                    downJinglePlaying = false;
-                },
-                { once: true }
-            );
-        }
+        /*
+         * 下りジングル再生
+         */
+        await playJingle(
+            downJingle,
+            "dj.mp3",
+            "down"
+        );
     }
 
 
     wasDownApproaching = downApproaching;
 }
-
 
 
 /* =========================================================
@@ -2711,21 +2758,32 @@ async function updateApproachSound() {
             '.block[data-direction="up"] .row.arrival.blink'
         ) !== null;
 
+
     const downApproaching =
         document.querySelector(
             '.block[data-direction="down"] .row.arrival.blink'
         ) !== null;
 
+
+    /*
+     * 上り・下りを並列ではなく順番に処理
+     * 状態競合を防止
+     */
+
     await handleUpApproach(upApproaching);
+
     await handleDownApproach(downApproaching);
+
+    updateAudioDebug();
 }
+
 
 
 /* =========================================================
    音声デバッグ表示を定期更新
    ========================================================= */
 
-setInterval(updateAudioDebug, 500);
+<!--setInterval(updateAudioDebug, 500);-->
 
 
 
