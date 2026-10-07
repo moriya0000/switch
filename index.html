@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>関鉄発車標 ver1.2</title>
+<title>関鉄発車標 ver1.3</title>
 <link rel="shortcut icon" href="https://www.kantetsu.co.jp/cms/wp-content/themes/kr/img/favicon/favicon.ico">
 <style>
 body {
@@ -1225,20 +1225,21 @@ button {
 </div>
   
 <div id="audioDebug" style="
-    margin: 10px auto 20px;
-    width: min(700px, calc(100vw - 30px));
-    padding: 12px;
-    background: #111;
-    color: #00ff66;
-    font-family: monospace;
-    font-size: 14px;
-    text-align: left;
-    border-radius: 6px;
-    box-sizing: border-box;
-    white-space: pre-wrap;
+    margin:10px auto 20px;
+    width:min(700px, calc(100vw - 30px));
+    padding:12px;
+    background:#111;
+    color:#00ff66;
+    border-radius:6px;
+    font-family:monospace;
+    font-size:14px;
+    line-height:1.5;
+    text-align:left;
+    white-space:pre-wrap;
 ">
-音声デバッグ情報
+音声デバッグ初期化中...
 </div>
+
 
 <!-- ================================
      スイッチ操作
@@ -1980,22 +1981,43 @@ const holidays = {
 };
 
 function updateDateInfo(){
+
   const d = new Date();
 
   const y = d.getFullYear();
   const m = d.getMonth() + 1;
   const day = d.getDate();
 
-  const week = d.getDay(); // 0=日,6=土
+  const week = d.getDay();
   const isWeekend = (week === 0 || week === 6);
   const isHoliday = isJapaneseHoliday(d);
 
-  document.getElementById("todayDate").textContent =
-    `${y}年${m.toString().padStart(2,'0')}月${day.toString().padStart(2,'0')}日`;
+  const todayDate =
+    document.getElementById("todayDate");
 
-  document.getElementById("dayType").textContent =
-    (isWeekend || isHoliday) ? "休日ダイヤ" : "平日ダイヤ";
+  const dayType =
+    document.getElementById("dayType");
+
+
+  if (todayDate) {
+
+    todayDate.textContent =
+      `${y}年${String(m).padStart(2,"0")}月${String(day).padStart(2,"0")}日`;
+
+  }
+
+
+  if (dayType) {
+
+    dayType.textContent =
+      (isWeekend || isHoliday)
+        ? "休日ダイヤ"
+        : "平日ダイヤ";
+
+  }
+
 }
+
 
 // 祝日判定
 function isJapaneseHoliday(date){
@@ -2096,100 +2118,90 @@ const cls = new Audio("cls.mp3");
 
 function updateAudioDebug() {
 
-    const debug = document.getElementById("audioDebug");
+  const debug =
+    document.getElementById("audioDebug");
 
-    if (!debug) return;
+  if (!debug) return;
 
 
-    function getState(audio) {
+  function state(audio) {
 
-        if (audio.paused) {
-
-            if (audio.ended) {
-                return "終了";
-            }
-
-            return "停止中";
-        }
-
-        return "再生中";
+    if (!audio) {
+      return "存在しません";
     }
 
-
-    function getTime(audio) {
-
-        if (!Number.isFinite(audio.currentTime)) {
-            return "0.00";
-        }
-
-        return audio.currentTime.toFixed(2);
+    if (audio.error) {
+      return "ERROR";
     }
 
+    if (audio.ended) {
+      return "終了";
+    }
 
-    debug.textContent =
-`音声有効: ${audioEnabled ? "YES" : "NO"}
+    if (audio.paused) {
+      return "停止中";
+    }
 
-up.mp3   : ${getState(upSound)}  currentTime=${getTime(upSound)}
-dw.mp3   : ${getState(downSound)}  currentTime=${getTime(downSound)}
-uj.mp3   : ${getState(upJingle)}  currentTime=${getTime(upJingle)}
-dj.mp3   : ${getState(downJingle)}  currentTime=${getTime(downJingle)}
-mel.mp3  : ${getState(mel)}  currentTime=${getTime(mel)}
-cls.mp3  : ${getState(cls)}  currentTime=${getTime(cls)}
+    return "再生中";
+  }
 
-上り接近: ${wasUpApproaching ? "YES" : "NO"}
-下り接近: ${wasDownApproaching ? "YES" : "NO"}
 
-上りジングル再生中: ${upJinglePlaying ? "YES" : "NO"}
-下りジングル再生中: ${downJinglePlaying ? "YES" : "NO"}`;
+  function time(audio) {
+
+    if (!audio) return "----";
+
+    return Number.isFinite(audio.currentTime)
+      ? audio.currentTime.toFixed(2)
+      : "----";
+  }
+
+
+  debug.textContent =
+`===== 音声デバッグ =====
+
+音声有効:
+${audioEnabled ? "YES" : "NO"}
+
+up.mp3
+状態: ${state(upSound)}
+時間: ${time(upSound)}
+
+dw.mp3
+状態: ${state(downSound)}
+時間: ${time(downSound)}
+
+uj.mp3
+状態: ${state(upJingle)}
+時間: ${time(upJingle)}
+
+dj.mp3
+状態: ${state(downJingle)}
+時間: ${time(downJingle)}
+
+mel.mp3
+状態: ${state(mel)}
+時間: ${time(mel)}
+
+cls.mp3
+状態: ${state(cls)}
+時間: ${time(cls)}
+
+------------------------
+
+上り接近:
+${wasUpApproaching ? "YES" : "NO"}
+
+下り接近:
+${wasDownApproaching ? "YES" : "NO"}
+
+上りジングル:
+${upJinglePlaying ? "PLAYING" : "STOP"}
+
+下りジングル:
+${downJinglePlaying ? "PLAYING" : "STOP"}
+`;
 }
-setInterval(updateAudioDebug, 500);
-audioList.forEach(audio => {
 
-    audio.addEventListener("play", () => {
-
-        console.log(
-            `[PLAY] ${audio.src}`
-        );
-
-        updateAudioDebug();
-
-    });
-
-
-    audio.addEventListener("pause", () => {
-
-        console.log(
-            `[PAUSE] ${audio.src}`
-        );
-
-        updateAudioDebug();
-
-    });
-
-
-    audio.addEventListener("ended", () => {
-
-        console.log(
-            `[ENDED] ${audio.src}`
-        );
-
-        updateAudioDebug();
-
-    });
-
-
-    audio.addEventListener("error", () => {
-
-        console.error(
-            `[AUDIO ERROR] ${audio.src}`,
-            audio.error
-        );
-
-        updateAudioDebug();
-
-    });
-
-});
 
 /* ---------------------------------------------------------
    基本設定
@@ -2346,9 +2358,6 @@ if (enableAudioButton) {
    接近状態
 --------------------------------------------------------- */
 
-let wasUpApproaching = false;
-let wasDownApproaching = false;
-
 
 /* ---------------------------------------------------------
    安全な再生
@@ -2403,6 +2412,31 @@ async function safePlay(audio, name) {
 }
 
 
+function setActiveButton(id) {
+
+  document
+    .querySelectorAll(
+      "#btnAuto, #btnWeekday, #btnHoliday"
+    )
+    .forEach(button => {
+
+      button.style.background = "";
+      button.style.color = "";
+
+    });
+
+
+  const button =
+    document.getElementById(id);
+
+
+  if (!button) return;
+
+
+  button.style.background = "#267a35";
+  button.style.color = "#fff";
+
+}
 
 
 /* ---------------------------------------------------------
