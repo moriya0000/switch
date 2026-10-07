@@ -317,8 +317,13 @@ const csvDownHoliday = `
 3157,水海道, ,23:59,普通,3,2,
 
 `;
+window.csvUpWeekday = csvUpWeekday;
+window.csvDownWeekday = csvDownWeekday;
+window.csvUpHoliday = csvUpHoliday;
+window.csvDownHoliday = csvDownHoliday;
+
 console.log("timetable.js 読み込み成功");
-console.log("csvUpWeekday:", typeof csvUpWeekday);
-console.log("csvDownWeekday:", typeof csvDownWeekday);
-console.log("csvUpHoliday:", typeof csvUpHoliday);
-console.log("csvDownHoliday:", typeof csvDownHoliday);
+console.log("csvUpWeekday:", typeof window.csvUpWeekday);
+console.log("csvDownWeekday:", typeof window.csvDownWeekday);
+console.log("csvUpHoliday:", typeof window.csvUpHoliday);
+console.log("csvDownHoliday:", typeof window.csvDownHoliday);
