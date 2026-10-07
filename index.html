@@ -26,6 +26,27 @@
         <div class="top__label">現在時刻</div>
         <div class="top__time" id="now">--:--</div>
     </header>
+<!-- =========================================
+         音声コントロール
+    ========================================== -->
+    <section class="audio-control" id="audioControl">
+
+        <button
+            type="button"
+            id="enableAudioButton"
+            class="audio-control__button"
+        >
+            🔊 音声を有効にする
+        </button>
+
+        <div
+            id="audioStatus"
+            class="audio-control__status"
+        >
+            iPadでは最初に1回タップしてください
+        </div>
+
+    </section>
 
 
     <!-- =========================================
@@ -95,28 +116,7 @@
     <main class="board" id="board"></main>
 
 
-    <!-- =========================================
-         音声コントロール
-    ========================================== -->
-    <section class="audio-control" id="audioControl">
-
-        <button
-            type="button"
-            id="enableAudioButton"
-            class="audio-control__button"
-        >
-            🔊 音声を有効にする
-        </button>
-
-        <div
-            id="audioStatus"
-            class="audio-control__status"
-        >
-            iPadでは最初に1回タップしてください
-        </div>
-
-    </section>
-
+    
 
     <!-- =========================================
          音声デバッグ
